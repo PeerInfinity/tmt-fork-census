@@ -1,13 +1,15 @@
 // Stage 3 — boot the shortlist (+ 3 local calibration rows) → data/boot.jsonl. Resumable; time-boxed.
-//   SHORTLIST=60 BUDGET_MIN=180 node scripts/3-boot.mjs
+//   [SHORTLIST=n] [BUDGET_MIN=180] [REBOOT_LOCATED=1] node scripts/3-boot.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync, execFileSync } from 'node:child_process';
 import { p, readJsonl, appendJsonl, latestBy, safeName } from '../lib/util.mjs';
 import { shortlistScore, familyKey } from '../lib/score.mjs';
 import { TMT, stockFor, tmtNumOf } from '../lib/tmt-stock.mjs';
+import { locateEngine, engineMoved, normBase } from '../lib/engine.mjs';
+import { scriptSrcs } from '../lib/scan.mjs';
 
-const N = Number(process.env.SHORTLIST || 60);
+const N = Number(process.env.SHORTLIST || Infinity); // every scored family (slice 1 used 60)
 const BUDGET_MS = Number(process.env.BUDGET_MIN || 180) * 60e3;
 const TICKS = 200, DIFF = 0.05;
 const OUT = p('data/boot.jsonl');
@@ -41,6 +43,15 @@ const CAL = [
   { full_name: 'calibration:The-Modding-Tree', local: '/home/robert/CC/The-Modding-Tree', calibration: true, upstream: 'Acamaeda/The-Modding-Tree' },
   { full_name: 'calibration:upgrade-land-tmt', local: '/home/robert/CC/upgrade-land-tmt', calibration: true, upstream: null },
 ];
+// REBOOT_LOCATED=1: re-boot every row whose stage-2 engine was located by content (moved engines); their old boot
+// lines are removed first, so there is one line per fork.
+// REBOOT=o/r,o/r re-boots the named rows the same way.
+if ((process.env.REBOOT_LOCATED || process.env.REBOOT) && fs.existsSync(OUT)) {
+  const located = new Set([...(process.env.REBOOT_LOCATED ? stat.filter((s) => s.engine_located).map((s) => s.full_name) : []), ...(process.env.REBOOT || '').split(',').filter(Boolean)]);
+  const all = readJsonl(OUT), keep = all.filter((r) => !located.has(r.full_name));
+  console.log('REBOOT: removing', all.length - keep.length, 'boot rows');
+  fs.writeFileSync(OUT, keep.map((r) => JSON.stringify(r) + '\n').join(''));
+}
 const done = new Set(readJsonl(OUT).map((r) => r.full_name));
 const queue = [...CAL, ...shortlist].filter((x) => !done.has(x.full_name));
 console.log('families:', fam.size, 'shortlist:', shortlist.length, 'to boot:', queue.length);
@@ -60,13 +71,31 @@ function numstat(a, b, extra = []) {
   const m = /^(\d+|-)\t(\d+|-)/.exec(r.stdout || '');
   return m ? [m[1] === '-' ? 0 : +m[1], m[2] === '-' ? 0 : +m[2]] : [0, 0];
 }
-function deviationVs(root, commit) {
+const walk = (d, pre = '') => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? (e.name === '.git' || e.name === 'node_modules' ? [] : walk(path.join(d, e.name), pre + e.name + '/')) : [pre + e.name]);
+// Where a fork keeps stock engine file f: the same path if present, else (a moved engine) the located game/temp file
+// for game.js / temp.js, else a file with the same path-independent name (lib/engine.mjs normBase) and extension —
+// the one index.html loads first, then the shortest path. null = none (counted as all lines removed). Applies to
+// every row, so a half-moved engine (tmtNum still in js/game.js, js/technical/* elsewhere) is measured too.
+function relocator(root, loc) {
+  const files = walk(root), html = fs.existsSync(path.join(root, 'index.html')) ? fs.readFileSync(path.join(root, 'index.html'), 'utf8') : '';
+  const order = scriptSrcs(html).map((x) => x.replace(/^\.?\//, ''));
+  return (f) => {
+    if (fs.existsSync(path.join(root, f))) return f;
+    if (f === 'js/game.js' && (loc?.game || loc?.gameLoop)) return loc.game || loc.gameLoop;
+    if (f === 'js/technical/temp.js' && loc?.updateTemp) return loc.updateTemp;
+    const ext = path.posix.extname(f).toLowerCase();
+    const c = files.filter((x) => path.posix.extname(x).toLowerCase() === ext && normBase(x) === normBase(f));
+    const rank = (x) => { const i = order.indexOf(x); return i < 0 ? 1e6 + x.length : i; };
+    return c.sort((x, y) => rank(x) - rank(y))[0] || null;
+  };
+}
+function deviationVs(root, commit, relocate = (f) => f) {
   const sd = stockDir(commit);
-  const walk = (d, pre = '') => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? (e.name === '.git' ? [] : walk(path.join(d, e.name), pre + e.name + '/')) : [pre + e.name]);
   const stockFiles = walk(sd).filter(ENGINE);
-  const per = {}; const tot = { stock_commit: commit, added: 0, removed: 0, logic_added: 0, logic_removed: 0, ws_added: 0, ws_removed: 0, missing_files: [] };
+  const per = {}; const tot = { stock_commit: commit, added: 0, removed: 0, logic_added: 0, logic_removed: 0, ws_added: 0, ws_removed: 0, missing_files: [], relocated: {} };
   for (const f of stockFiles) {
-    const a = path.join(sd, f), b = path.join(root, f);
+    const to = relocate(f); if (to && to !== f) tot.relocated[f] = to;
+    const a = path.join(sd, f), b = to ? path.join(root, to) : path.join(root, f);
     let d, w;
     if (!fs.existsSync(b)) { d = [0, lines(a)]; w = d; tot.missing_files.push(f); }
     else { d = numstat(a, b); w = numstat(a, b, ['--ignore-all-space', '--ignore-blank-lines']); }
@@ -92,13 +121,14 @@ function candidates(v) {
   }
   const r = [...seen.values()]; candCache.set(v, r); return r;
 }
-function deviation(root, tmtNum) {
+function deviation(root, tmtNum, loc = null) {
   const st = stockFor(tmtNum); if (!st) return null;
-  const last = deviationVs(root, st.commit);
+  const relocate = relocator(root, loc);
+  const last = deviationVs(root, st.commit, relocate);
   let best = last;
   for (const c of candidates(st.version)) {
     if (c === st.commit) continue;
-    const d = deviationVs(root, c);
+    const d = deviationVs(root, c, relocate);
     if (d.added + d.removed < best.added + best.removed) best = d;
   }
   return { stock_version: st.version, exact: st.exact, note: st.note || null, candidates: candidates(st.version).length,
@@ -156,7 +186,23 @@ for (const item of queue) {
     if (!fs.existsSync(path.join(root, 'index.html'))) throw new Error('no index.html at repo root');
     const game = fs.existsSync(path.join(root, 'js/game.js')) ? fs.readFileSync(path.join(root, 'js/game.js'), 'utf8') : null;
     row.tmtNum = tmtNumOf(game);
-    row.engine_deviation = row.tmtNum ? deviation(root, row.tmtNum) : null;
+    let loc = null;
+    if (!row.tmtNum) {
+      // Moved engine: locate by content — index.html's local scripts first, then every .js in the clone.
+      const read = (f) => { try { return fs.statSync(path.join(root, f)).size < 1.5e6 ? fs.readFileSync(path.join(root, f), 'utf8') : null; } catch { return null; } };
+      const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+      const order = scriptSrcs(html).filter((x) => !/^(https?:)?\/\//i.test(x)).map((x) => x.replace(/^\.?\//, '').replace(/[?#].*$/, '')).filter((x) => x.endsWith('.js'));
+      const files = Object.fromEntries(order.map((f) => [f, read(f)]));
+      loc = locateEngine(files, order);
+      if (!loc.game && !loc.gameLoop) {
+        const more = walk(root).filter((f) => f.endsWith('.js') && !(f in files) && !/vue/i.test(f));
+        for (const f of more) files[f] = read(f);
+        loc = locateEngine(files, [...order, ...more]);
+      }
+      row.engine_located = loc; row.engine_moved = engineMoved(loc);
+      row.tmtNum = loc.tmtNum;
+    }
+    row.engine_deviation = row.tmtNum ? deviation(root, row.tmtNum, row.engine_moved ? loc : null) : null;
     const cdn = await cdnMap(root);
     const a = bootOnce(root, 'idle', cdn), b = bootOnce(root, 'idle', cdn);
     row.boot = a;
