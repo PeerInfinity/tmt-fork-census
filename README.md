@@ -111,5 +111,22 @@ first.
   not booted, 0 when the boot failed);
 - a **failed boot halves** the total (a game that crashes at load in its own engine is not a candidate until fixed).
 
+### Family collapse
+Applied by `rank.mjs` after every family has a representative, against each calibration row (`lib/calibration.mjs`;
+its layer ids and counts come from stage 2's static census run on the local clone, its live numbers from its boot).
+
+- **(a) Copy.** A family whose representative has the calibration tree's **layer-id set** and the same **static
+  content counts** (milestones / upgrades / buyables / challenges / achievements) — and, where both booted with a
+  census, the same live game-layer count and content counts (PTR: 28 layers / 85 / 172 / 52 / 9 / 80) — is a copy.
+  The **whole family** moves into the calibration row's `copies` (name, link, `tmtNum`, `representative`, and
+  `edited` when that member's own static ids or counts differ) and leaves the ranked table. The engine version is
+  not part of the test: PTR's mod files dropped onto a 2.6.6.2 engine is still a copy of PTR (its `tmtNum` is listed).
+- **(b) Family.** Every other family keeps one representative (the stage-3 rule) and carries `members` (count) and
+  `family_members` (names).
+- **(c) Base.** A representative whose layer-id set **contains** a calibration tree's (strictly more ids, or the same
+  ids with different counts) is that tree **plus added or changed content** (NG+, Extended Tree) — not a copy. It stays
+  ranked, marked `base: PTR`. A calibration tree with ≤ 2 layer ids (the trivial threshold: stock TMT's demo) is never
+  a base. A fork that renamed any of the tree's layers matches neither (a) nor (c).
+
 `archived` is shown, not scored (finished and abandoned games both get archived). Engine deviation is a
 separate column, not folded into the score. Boot-exact numbers replace static ones where a boot row exists.
