@@ -86,7 +86,7 @@ async function census(f) {
   const b = row.branchiness;
   const reasons = [];
   if (b.layers <= 2) reasons.push('<=2 layers');
-  if (row.layers_is_demo && row.content_files.length <= 1) reasons.push('demo unchanged');
+  if (row.layers_is_demo && row.content_files.every((x) => x === 'js/layers.js' || x === 'js/tree.js')) reasons.push('demo unchanged');
   if (b.branchEdges === 0) reasons.push('no branches');
   row.trivial_reasons = reasons;
   row.trivial = reasons.length > 0;
