@@ -2,7 +2,7 @@
 
 A census of the GitHub forks of The Modding Tree and Prestige Tree (both fork lists, plus one level of forks-of-forks). Forks never pushed to are dropped; every other fork's files are read at HEAD and a small lexer counts its layers, tree rows, branch edges and content (milestones, upgrades, buyables, challenges, achievements). Forks with the same layer-id set on the same engine version form one family, represented by one fork; every family with a branching tree and some content is cloned and booted headless (200 idle ticks twice for determinism, plus a simple buy/reset policy), and its engine files are diffed against the closest stock TMT commit of its version (the port cost). Families that are exact copies of a calibration tree are folded into that tree's row. Rows are ranked by a 0–100 composite: branchiness 40, content 30, completeness 30, halved when the boot fails. The data are GitHub metadata and counts, not game code.
 
-Generated 2026-09-14 by `scripts/rank.mjs` from `data/*.jsonl` at commit `6913686` of [PeerInfinity/tmt-fork-census](https://github.com/PeerInfinity/tmt-fork-census). Every number below is read from those rows.
+Generated 2026-09-14 by `scripts/rank.mjs` from `data/*.jsonl` at commit `aac8c3e` of [PeerInfinity/tmt-fork-census](https://github.com/PeerInfinity/tmt-fork-census). Every number below is read from those rows.
 🔧 = calibration row (local clone, not a fork). Score = branchiness 40 + content 30 + completeness 30 (formula: README, `lib/score.mjs`).
 
 ## Funnel

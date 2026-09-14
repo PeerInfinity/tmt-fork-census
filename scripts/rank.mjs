@@ -239,11 +239,67 @@ ${booted.filter((r) => r.boot_ok && !r.deterministic).map((r) => `| ${esc(r.full
 fs.writeFileSync(p('results/SUMMARY.md'), md);
 
 // ---- docs/index.html (static, no CDN, data inline, relative links only) --------------------------
-const cols = ['rank', 'full_name', 'play', 'mod_name', 'version_num', 'base', 'tmtNum', 'score', 's_branch', 's_content', 's_complete', 'layers', 'rows', 'widthPerRow', 'branchEdges', 'forkNodes', 'joinNodes', 'milestones', 'upgrades', 'buyables', 'challenges', 'achievements', 'content', 'pushed_at', 'archived', 'stars', 'members', 'boot_ok', 'deterministic', 'policy_ok', 'trace_fields', 'dev_added', 'dev_removed', 'dev_logic_added', 'dev_logic_removed', 'dev_stock', 'engine_moved', 'same_tree_as_ptr'];
+// ---- column definitions ---------------------------------------------------------------------------
+// The ONE source for the column list: the page's header tooltips and legend, the Columns panel's labels
+// and the "Columns" table in README.md are all generated from it. {key, label, desc, note} — desc says what
+// the number is and where it comes from; note is the unit or format.
+const COLDEFS = [
+  { key: 'rank', label: 'Rank', desc: 'Position in this table, highest composite score first.', note: '1–N over the ranked rows; calibration clones are ranked alongside the forks' },
+  { key: 'full_name', label: 'Repository', desc: 'The GitHub repo this row stands for — a family\'s representative fork, or a local calibration clone.', note: 'owner/name, linking to github.com; a calibration row links to its upstream repo' },
+  { key: 'play', label: 'Play', desc: 'The row\'s live game page, derived from the repo\'s homepage or its GitHub Pages URL and verified with one GET (stage 4).', note: '▶ play = answered 2xx/3xx; a greyed ▶ dead names the status in its tooltip; empty = no URL could be derived' },
+  { key: 'mod_name', label: 'Game name', desc: 'The game\'s own title, read from modInfo.name in js/mod.js.', note: 'text, exactly as the fork wrote it' },
+  { key: 'version_num', label: 'Version', desc: 'The game\'s own version string, from modInfo.versionNumber.', note: 'text; the stock demo\'s "0.0" earns no completeness point' },
+  { key: 'base', label: 'Base game', desc: 'The calibration tree this game is built on: its layer-id set contains that tree\'s, so it is that game plus added or changed content (README, Family collapse (c)).', note: 'PTR, TMT or upgrade-land-tmt; empty when it is not built on one' },
+  { key: 'tmtNum', label: 'Engine version', desc: 'The Modding Tree engine the fork runs, from tmtNum in js/game.js — or, when the engine was moved off the stock paths, from the engine located by content.', note: 'e.g. 2.6.6.2; empty when nothing declares it' },
+  { key: 'score', label: 'Score', desc: 'The composite ranking, branchiness 40 + content 30 + completeness 30, halved when the boot failed (lib/score.mjs: composite).', note: '0–100, two decimals' },
+  { key: 's_branch', label: 'Branchiness', desc: 'The branchiness part of the score: 40 × min(1, (fork nodes + join nodes) / 30), × 0.25 when the tree is linear.', note: '0–40; the /30 is PTR\'s 30 nodes' },
+  { key: 's_content', label: 'Content score', desc: 'The content part of the score: 30 × min(1, log10(1 + content) / log10(401)).', note: '0–30; the 401 is PTR\'s content of 398' },
+  { key: 's_complete', label: 'Completeness', desc: 'The completeness part: 10 for an endgame differing from the stock demo\'s, 10 × recency of the last push (≤ 1 year → 1, falling to 0 at 5), 5 for a version that is not 0.0, 5 for booting headless (2.5 not booted, 0 failed).', note: '0–30' },
+  { key: 'layers', label: 'Layers', desc: 'How many game layers the tree has — from the live layers object where the fork booted, else stage 2\'s static lexer.', note: 'count' },
+  { key: 'rows', label: 'Tree rows', desc: 'How many distinct rows the tree layout declares — how deep the tree is.', note: 'count' },
+  { key: 'widthPerRow', label: 'Width per row', desc: 'How many layers sit in each tree row, top row first — the tree\'s shape in one line.', note: 'comma-separated counts, one per row' },
+  { key: 'branchEdges', label: 'Branch edges', desc: 'Edges in the branch DAG: every layer-to-layer prerequisite link the tree declares.', note: 'count' },
+  { key: 'forkNodes', label: 'Fork nodes', desc: 'Layers with ≥ 2 children in the branch DAG — where the tree splits.', note: 'count; fork + join nodes drive the branchiness score' },
+  { key: 'joinNodes', label: 'Join nodes', desc: 'Layers with ≥ 2 parents in the branch DAG — where branches merge.', note: 'count; fork + join nodes drive the branchiness score' },
+  { key: 'milestones', label: 'Milestones', desc: 'Milestones counted across the game\'s layers (boot-exact where the fork booted, else the static census).', note: 'count' },
+  { key: 'upgrades', label: 'Upgrades', desc: 'Upgrades counted across the game\'s layers.', note: 'count' },
+  { key: 'buyables', label: 'Buyables', desc: 'Buyables counted across the game\'s layers.', note: 'count' },
+  { key: 'challenges', label: 'Challenges', desc: 'Challenges counted across the game\'s layers.', note: 'count' },
+  { key: 'achievements', label: 'Achievements', desc: 'Achievements counted across the game\'s layers.', note: 'count' },
+  { key: 'content', label: 'Content total', desc: 'Total content = milestones + upgrades + buyables + challenges + achievements.', note: 'count; this is what the content score reads' },
+  { key: 'pushed_at', label: 'Last push', desc: 'When the repository was last pushed to, from the GitHub API.', note: 'YYYY-MM-DD; drives the recency half of completeness' },
+  { key: 'archived', label: 'Archived', desc: 'Whether GitHub marks the repository archived — shown, never scored, since a finished game and an abandoned one both get archived.', note: 'true / false' },
+  { key: 'stars', label: 'Stars', desc: 'The repository\'s stargazer count from the GitHub API.', note: 'integer; used only to break ties when picking a family\'s representative' },
+  { key: 'members', label: 'Members / copies', desc: 'For a fork row, how many repos share this game (the same layer-id set on the same engine version); for a calibration row, how many forks are exact copies of it and have left the ranking (README, Family collapse).', note: 'count; the cell expands to the list' },
+  { key: 'boot_ok', label: 'Boots', desc: 'Whether the game loaded and ran 200 headless ticks in its own engine (stage 3).', note: 'true / false; empty when the family was not booted, and a false halves the score' },
+  { key: 'deterministic', label: 'Deterministic', desc: 'Whether the two idle boot legs ended on the same state hash after the same number of ticks.', note: 'true / false; a false row lists the differing player paths in SUMMARY.md' },
+  { key: 'policy_ok', label: 'Policy leg', desc: 'Whether the second boot leg survived a generic play policy (each tick: reset any row-0 layer that can reset, buy every affordable unlocked upgrade).', note: 'true / false; recorded, never scored' },
+  { key: 'trace_fields', label: 'Milestone fields', desc: 'How many distinct player fields the milestone done() conditions read, traced through a Proxy — a rough measure of what the game\'s goals depend on.', note: 'count' },
+  { key: 'dev_added', label: 'Engine lines added', desc: 'Engine lines added against the closest stock TMT commit of the fork\'s version — the port cost.', note: 'git diff --numstat line count over the stock engine files' },
+  { key: 'dev_removed', label: 'Engine lines removed', desc: 'Engine lines removed against that same stock commit; a stock file with no counterpart in the fork counts as wholly removed.', note: 'git diff --numstat line count' },
+  { key: 'dev_logic_added', label: 'Logic lines added', desc: 'The share of the added lines that lands in the logic files (game.js, utils.js, utils/*, technical/temp, layerSupport, displays, loader).', note: 'line count, a subset of engine lines added' },
+  { key: 'dev_logic_removed', label: 'Logic lines removed', desc: 'The share of the removed lines that lands in those same logic files.', note: 'line count, a subset of engine lines removed' },
+  { key: 'dev_stock', label: 'Stock baseline', desc: 'Which stock TMT commit the engine deviation was measured against (many commits share one tmtNum, so it is the closest of them).', note: 'version@commit; "(nearest lower)" when the fork\'s version is not in the stock map' },
+  { key: 'engine_moved', label: 'Engine moved', desc: 'Whether the fork moved its engine files off the stock paths, so they had to be located by content before diffing.', note: 'true / false' },
+  { key: 'same_tree_as_ptr', label: 'Same tree as PTR', desc: 'Whether the booted game\'s live row roster is exactly Prestige Tree Rewritten\'s — flagged so a near-copy is not read as a new game.', note: 'true / false' },
+];
+const cols = COLDEFS.map((d) => d.key);
 const slim = rows.map((r) => ({ ...Object.fromEntries(cols.map((c) => [c, c === 'widthPerRow' ? (r[c] || []).join(',') : c === 'pushed_at' ? (r[c] || '').slice(0, 10) : c === 'play' ? (r.live_ok ? 'live' : r.live_url ? 'dead' : null) : r[c] ?? null])),
   url: r.url, calibration: r.calibration, live_url: r.live_url || null, live_ok: !!r.live_ok, live_status: r.live_status ?? null,
   family_members: r.calibration ? null : r.family_members, copies: r.calibration ? r.copies.map((x) => ({ n: x.full_name, u: x.url, v: x.tmtNum, e: x.edited, r: x.representative, l: x.live_ok ? x.live_url : null })) : null }));
 const hesc = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// README's column table comes from the same definitions — the block between the markers is rewritten here.
+const README_START = '<!-- columns:start (generated by scripts/rank.mjs from COLDEFS — do not edit by hand) -->';
+const README_END = '<!-- columns:end -->';
+const colsMd = [README_START, '', '| column | what it is | format |', '|---|---|---|',
+  ...COLDEFS.map((d) => `| \`${d.key}\` (${esc(d.label)}) | ${esc(d.desc)} | ${esc(d.note)} |`), '', README_END].join('\n');
+{
+  const f = p('README.md'); const txt = fs.readFileSync(f, 'utf8');
+  const a = txt.indexOf(README_START), b = txt.indexOf(README_END);
+  if (a < 0 || b < 0) console.error('README.md: no columns block (markers missing) — column table NOT updated');
+  else { const next = txt.slice(0, a) + colsMd + txt.slice(b + README_END.length); if (next !== txt) fs.writeFileSync(f, next); }
+}
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TMT Fork Census</title>
@@ -260,6 +316,11 @@ p{color:var(--mut);margin:0 0 12px;max-width:80ch}
 .about>summary::before{content:"\\25b8 ";color:var(--mut)}
 .about[open]>summary::before{content:"\\25be "}
 .ab{padding:10px 10px 0;border-top:1px solid var(--line)}
+.ab h2{font-size:14px;margin:14px 0 6px}
+.lg{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:3px 14px;margin:0 0 12px;max-width:110ch}
+.lg dt{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:nowrap}
+.lg dd{margin:0;color:var(--mut)}
+.lg b{color:var(--fg);font-weight:600}
 .ab p:last-child{margin-bottom:10px}
 .bar{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0;max-width:100%}
 button,input{font:inherit;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
@@ -301,6 +362,8 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 <details class="about" id="about"><summary><h1>TMT Fork Census</h1> <span class="n">about \u00b7 methodology, provenance, how to read the table</span></summary><div class="ab">
 <p>${hesc(METHOD)}</p>
 <p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). The <em>play</em> column links the repo's verified live page (stage 4); a greyed marker means the page exists in the repo's metadata but did not answer. Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort; drag a header's right edge to resize it (double-click that edge to reset); the table scrolls sideways inside its own frame.</p>
+<h2>Columns</h2>
+<dl class="lg">${COLDEFS.map((d) => `<dt><code>${hesc(d.key)}</code></dt><dd><b>${hesc(d.label)}</b> \u2014 ${hesc(d.desc)} <span class="n">${hesc(d.note)}</span></dd>`).join('')}</dl>
 </div></details>
 <script>try{if(localStorage.getItem('tmtcensus.about')==='true')document.getElementById('about').open=true}catch(e){}</script>
 <div class="bar">
@@ -317,6 +380,8 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 <script type="application/json" id="data">${JSON.stringify(slim).replace(/</g, '\\u003c')}</script>
 <script>
 const rows=JSON.parse(document.getElementById('data').textContent);const cols=${JSON.stringify(cols)};
+const CD=${JSON.stringify(Object.fromEntries(COLDEFS.map((d) => [d.key, [d.label, d.desc, d.note]])))};
+const tip=c=>{const d=CD[c];return d?d[0]+' ('+c+') \u2014 '+d[1]+' \u00b7 '+d[2]:c};
 const text=new Set(['full_name','play','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
 const KEYCOLS=['rank','full_name','play','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok'];
 const LS={get(k,d){try{const v=localStorage.getItem('tmtcensus.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('tmtcensus.'+k,JSON.stringify(v))}catch(e){}}};
@@ -327,7 +392,7 @@ const h=document.getElementById('h'),b=document.getElementById('b'),q=document.g
 const vis=()=>cols.filter(c=>!hidden.has(c));
 function applyWidths(){let s='';for(const c of cols){const w=widths[c];if(w)s+='th[data-c="'+c+'"],td[data-c="'+c+'"]{width:'+w+'px;min-width:'+w+'px;max-width:'+w+'px}'}cw.textContent=s}
 const EDGE=8,near=(th,x)=>th.getBoundingClientRect().right-x<=EDGE;let dragged=false;
-function head(){h.replaceChildren(...vis().map(c=>{const th=document.createElement('th');th.dataset.c=c;th.className=(text.has(c)?'t':'');th.title=c+' \\u2014 click to sort, drag the right edge to resize, double-click it to reset';
+function head(){h.replaceChildren(...vis().map(c=>{const th=document.createElement('th');th.dataset.c=c;th.className=(text.has(c)?'t':'');th.title=tip(c)+'\\n\\nClick to sort, drag the right edge to resize, double-click that edge to reset.';
 th.appendChild(document.createTextNode(c+(key===c?(dir>0?' \\u25b2':' \\u25bc'):'')));
 const rs=document.createElement('span');rs.className='rs';th.appendChild(rs);
 th.addEventListener('pointermove',e=>{if(!dragging)th.classList.toggle('rz',near(th,e.clientX))});
@@ -356,7 +421,7 @@ else{const v=r[c]==null?'':String(r[c]);td.textContent=v;if(v&&text.has(c))td.ti
 tr.appendChild(td)}return tr}))}
 function boxes(){cg.replaceChildren(...cols.map(c=>{const l=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=!hidden.has(c);
 cb.onchange=()=>{if(cb.checked)hidden.delete(c);else hidden.add(c);LS.set('hidden',[...hidden]);head();draw()};
-l.appendChild(cb);l.appendChild(document.createTextNode(c));return l}))}
+l.title=tip(c);l.appendChild(cb);l.appendChild(document.createTextNode(c));return l}))}
 function setHidden(s){hidden=s;LS.set('hidden',[...hidden]);boxes();head();draw()}
 document.getElementById('all').onclick=()=>setHidden(new Set());
 document.getElementById('key').onclick=()=>setHidden(new Set(cols.filter(c=>!KEYCOLS.includes(c))));
