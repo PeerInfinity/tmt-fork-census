@@ -253,7 +253,7 @@ details{white-space:normal;max-width:48ch;text-align:left}summary{cursor:pointer
 </style></head><body>
 <h1>TMT Fork Census</h1>
 <p>${hesc(METHOD)}</p>
-<p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/master/results/SUMMARY.md">SUMMARY.md</a>). Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort.</p>
+<p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort.</p>
 <input id="q" placeholder="filter by repo or game name" aria-label="filter">
 <div class="wrap"><table><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
 <script type="application/json" id="data">${JSON.stringify(slim).replace(/</g, '\\u003c')}</script>
