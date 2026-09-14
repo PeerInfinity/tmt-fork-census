@@ -32,6 +32,7 @@ gitignored — the raw cache is third-party code).
 | 1. list | `node scripts/1-list.mjs` | `data/forks.jsonl` |
 | 2. static | `node scripts/2-static.mjs` (`LIMIT=n`, `ONLY=o/r,o/r`) | `data/static.jsonl` |
 | 3. boot | `node scripts/3-boot.mjs` (`SHORTLIST=60`, `BUDGET_MIN=180`) | `data/boot.jsonl`, `data/shortlist.json`, `clones/` (gitignored) |
+| 4. live | `node scripts/4-live.mjs` (`--recheck`) | `data/live.jsonl`, `cache/live/` (gitignored) |
 | rank | `node scripts/rank.mjs` | `results/SUMMARY.md`, `results/table.json`, `docs/index.html` |
 
 ### 1. List
@@ -108,6 +109,25 @@ before any game file runs and children get a scrubbed environment — this runs 
 Time box: `BUDGET_MIN` (default 180) wall minutes; the row count that ran is in the log and SUMMARY. Re-boot rows with
 `REBOOT_LOCATED=1` (every row whose engine stage 2 located by content) or `REBOOT=o/r,o/r`; their old lines are removed
 first.
+
+### 4. Live
+Where the game can actually be played. No repo metadata is fetched: stage 1 already reads `homepage` and
+`has_pages` off the `/forks` listing, and the live URL is derived from them by one rule —
+`homepage` when it is an `http(s)` URL (`live_source: homepage`), else `https://<owner>.github.io/<repo>/` when
+`has_pages` (`live_source: pages`), else no row. Each derived URL is then **verified** with one GET (redirects
+followed, 10 s timeout, 4 at a time): `live_status` is the HTTP code or `"error"`, and `live_ok` is true for
+2xx/3xx. A dead URL keeps its row, so the table can show it greyed with its status instead of silently dropping it.
+Per-URL results are cached under `cache/live/` (no body stored, and no GitHub token is sent to third-party hosts);
+repos already in `data/live.jsonl` are skipped. `--recheck` ignores both.
+
+Calibration rows are local clones, so only PTR has a public page; its URL comes from the upstream repo's own
+GitHub metadata (`https://jacorb90.github.io/Prestige-Tree/`, which redirects to `https://jacorb90.me/Prestige-Tree/`)
+rather than being written down here. Stock TMT's Pages site is the engine's demo tree, not a game, and
+`upgrade-land-tmt` is local-only: neither gets a live URL.
+
+`rank.mjs` joins the rows on `full_name` and carries `live_url`, `live_status`, `live_ok` and `live_source` into
+`results/table.json`, a `play` column in `results/SUMMARY.md` and the `play` column of the page (also on each
+calibration copy).
 
 ## Rank
 `lib/score.mjs: composite`, 0–100:
