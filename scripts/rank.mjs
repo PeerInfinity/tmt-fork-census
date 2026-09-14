@@ -249,7 +249,7 @@ table{border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:now
 th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
 th{position:sticky;top:0;background:var(--bg);cursor:pointer;user-select:none;font-weight:600}
 td.t,th.t{text-align:left}tr.cal td{background:var(--hi)}a{color:var(--acc)}
-details{white-space:normal;max-width:48ch}summary{cursor:pointer}
+details{white-space:normal;max-width:48ch;text-align:left}summary{cursor:pointer;white-space:nowrap}
 </style></head><body>
 <h1>TMT Fork Census</h1>
 <p>${hesc(METHOD)}</p>
