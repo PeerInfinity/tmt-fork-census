@@ -242,24 +242,31 @@ const html = `<!doctype html>
 :root{color-scheme:dark;--bg:#151513;--bg2:#20201c;--zeb:#1b1b18;--fg:#e8e6df;--mut:#9c9a91;--line:#35342f;--hi:#3d3620;--acc:#8fd7b0;--btn:#26261f}
 :root[data-theme="light"]{color-scheme:light;--bg:#fbfaf7;--bg2:#f1efe8;--zeb:#f6f5f1;--fg:#1d1d1b;--mut:#67665f;--line:#e0ded6;--hi:#fff3c4;--acc:#1a5e3f;--btn:#eeece4}
 *{box-sizing:border-box}
-body{margin:0;padding-block:24px;padding-inline:16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column}
-h1{font-size:20px;margin:0 0 4px}
+body{margin:0;padding-block:16px;padding-inline:16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column}
+h1{font-size:17px;margin:0;display:inline;font-weight:700}
 p{color:var(--mut);margin:0 0 12px;max-width:80ch}
-.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 8px;max-width:100%}
+.about{border:1px solid var(--line);border-radius:6px;background:var(--bg2);max-width:100%}
+.about>summary{cursor:pointer;padding:6px 10px;user-select:none;list-style:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.about>summary::-webkit-details-marker{display:none}
+.about>summary::before{content:"\\25b8 ";color:var(--mut)}
+.about[open]>summary::before{content:"\\25be "}
+.ab{padding:10px 10px 0;border-top:1px solid var(--line)}
+.ab p:last-child{margin-bottom:10px}
+.bar{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0;max-width:100%}
 button,input{font:inherit;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
 button{background:var(--btn);cursor:pointer}
 button:hover{border-color:var(--mut)}
 input{background:var(--bg);width:min(320px,100%)}
-.cols{border:1px solid var(--line);border-radius:4px;background:var(--btn);max-width:100%;margin:0 0 4px}
-.cols>summary{cursor:pointer;padding:6px 8px;user-select:none;list-style:none}
+.cols{border:1px solid var(--line);border-radius:4px;background:var(--btn)}
+.cols>summary{cursor:pointer;padding:6px 8px;user-select:none;list-style:none;white-space:nowrap}
 .cols>summary::-webkit-details-marker{display:none}
 .cols>summary::before{content:"\\25b8 ";color:var(--mut)}
 .cols[open]>summary::before{content:"\\25be "}
-.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:2px 12px;padding:8px;border-top:1px solid var(--line);max-height:40vh;overflow:auto}
+.cg{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:6;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:2px 12px;padding:8px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;max-height:50vh;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .cg label{display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .cg input{width:auto;padding:0}
 .n{color:var(--mut);font-size:12px}
-.wrap{overflow:auto;max-width:100%;flex:1 1 auto;min-height:340px;margin-top:4px;border:1px solid var(--line);border-radius:6px}
+.wrap{overflow:auto;max-width:100%;flex:1 1 auto;min-height:340px;margin-top:8px;border:1px solid var(--line);border-radius:6px}
 table{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;white-space:nowrap}
 th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top;overflow:hidden;text-overflow:ellipsis}
 th{position:sticky;top:0;z-index:2;background:var(--bg2);cursor:pointer;user-select:none;font-weight:600;touch-action:none}
@@ -280,18 +287,20 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 </style>
 <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tmtcensus.theme')==='"light"'?'light':'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
 </head><body>
-<h1>TMT Fork Census</h1>
+<details class="about" id="about"><summary><h1>TMT Fork Census</h1> <span class="n">about \u00b7 methodology, provenance, how to read the table</span></summary><div class="ab">
 <p>${hesc(METHOD)}</p>
 <p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort; drag a header's right edge to resize it (double-click that edge to reset); the table scrolls sideways inside its own frame.</p>
+</div></details>
+<script>try{if(localStorage.getItem('tmtcensus.about')==='true')document.getElementById('about').open=true}catch(e){}</script>
 <div class="bar">
 <input id="q" placeholder="filter by repo or game name" aria-label="filter">
+<details class="cols"><summary>Columns</summary><div class="cg" id="cg"></div></details>
 <button id="theme" type="button">Light</button>
 <button id="all" type="button">All columns</button>
 <button id="key" type="button">Key columns</button>
 <button id="rw" type="button">Reset widths</button>
 <span class="n" id="count"></span>
 </div>
-<details class="cols"><summary>Columns</summary><div class="cg" id="cg"></div></details>
 <div class="wrap" id="wrap"><table id="tbl"><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
 <style id="cw"></style>
 <script type="application/json" id="data">${JSON.stringify(slim).replace(/</g, '\\u003c')}</script>
@@ -342,6 +351,7 @@ document.getElementById('rw').onclick=()=>{widths={};LS.set('widths',widths);app
 const tb=document.getElementById('theme');
 const paint=()=>{tb.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'Light':'Dark'};
 tb.onclick=()=>{const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);LS.set('theme',t);paint()};
+const ab=document.getElementById('about');ab.addEventListener('toggle',()=>LS.set('about',ab.open));
 paint();q.oninput=draw;applyWidths();boxes();head();draw();
 </script></body></html>`;
 fs.mkdirSync(p('docs'), { recursive: true });
