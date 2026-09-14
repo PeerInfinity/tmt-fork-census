@@ -1,0 +1,13 @@
+{
+  "name": "tmt-fork-census",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "list": "node scripts/1-list.mjs",
+    "static": "node scripts/2-static.mjs",
+    "boot": "node scripts/3-boot.mjs",
+    "rank": "node scripts/rank.mjs"
+  }
+}
