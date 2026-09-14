@@ -52,7 +52,7 @@ with no other content file, no branch edges.
 0 for trivial rows (`lib/score.mjs: shortlistScore`). Rows are grouped into **families** — the same layer-id
 set on the same `tmtNum` (copies and light edits of one game); the best-scoring member represents it (ties — copies score the same — go to the most
 stars, then the most-copied content hash, i.e. the unmodified game rather than someone's broken edit, then the
-latest push), and the top 60 families are booted, plus three calibration rows from local clones
+latest push), and every family with a shortlist score > 0 is booted (slice 1 booted the top 60; slice 2 ran `SHORTLIST=1000`, i.e. all 195, in 9.2 min for the 135 not yet booted), plus three calibration rows from local clones
 (`~/CC/Prestige-Tree`, `~/CC/The-Modding-Tree`, `~/CC/upgrade-land-tmt`).
 
 Per row: `git clone --depth 1` into `clones/`; **engine deviation** = `git diff --no-index --numstat` of every
