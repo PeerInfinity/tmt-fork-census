@@ -8,6 +8,7 @@ import { shortlistScore, familyKey } from '../lib/score.mjs';
 import { TMT, stockFor, tmtNumOf } from '../lib/tmt-stock.mjs';
 import { locateEngine, engineMoved, normBase } from '../lib/engine.mjs';
 import { scriptSrcs } from '../lib/scan.mjs';
+import { CALIBRATION } from '../lib/calibration.mjs';
 
 const N = Number(process.env.SHORTLIST || Infinity); // every scored family (slice 1 used 60)
 const BUDGET_MS = Number(process.env.BUDGET_MIN || 180) * 60e3;
@@ -38,11 +39,7 @@ const shortlist = [...fam.values()].sort((a, b) => b.best.sc - a.best.sc).slice(
   .map((x, i) => ({ full_name: x.best.s.full_name, shortlist_rank: i + 1, stage2_score: x.best.sc, family_size: x.members.length, family: x.members }));
 fs.writeFileSync(p('data/shortlist.json'), JSON.stringify(shortlist, null, 1));
 
-const CAL = [
-  { full_name: 'calibration:Prestige-Tree', local: '/home/robert/CC/Prestige-Tree', calibration: true, upstream: 'Jacorb90/Prestige-Tree' },
-  { full_name: 'calibration:The-Modding-Tree', local: '/home/robert/CC/The-Modding-Tree', calibration: true, upstream: 'Acamaeda/The-Modding-Tree' },
-  { full_name: 'calibration:upgrade-land-tmt', local: '/home/robert/CC/upgrade-land-tmt', calibration: true, upstream: null },
-];
+const CAL = CALIBRATION.map((c) => ({ full_name: c.full_name, local: c.local, calibration: true, upstream: c.upstream }));
 // REBOOT_LOCATED=1: re-boot every row whose stage-2 engine was located by content (moved engines); their old boot
 // lines are removed first, so there is one line per fork.
 // REBOOT=o/r,o/r re-boots the named rows the same way.
