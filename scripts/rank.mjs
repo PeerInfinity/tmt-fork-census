@@ -23,6 +23,10 @@ const shortlist = fs.existsSync(p('data/shortlist.json')) ? JSON.parse(fs.readFi
 // Stage 4 — the verified live game page per repo (scripts/4-live.mjs). Missing = no page was derivable.
 const liveRows = readJsonl(p('data/live.jsonl'));
 const live = latestBy(liveRows);
+// Stage 5 — the repo's declared license as GitHub reports it (scripts/5-license.mjs); calibration rows read their clone's files.
+const licRows = readJsonl(p('data/license.jsonl'));
+const lic = latestBy(licRows);
+const licOf = (name) => { const l = lic.get(name); return { license: l ? l.license : null, license_name: l ? l.license_name : null, license_source: l ? l.license_source : null, license_note: l ? l.license_note : null }; };
 const liveOf = (name) => { const l = live.get(name); return l ? { live_url: l.live_url, live_status: l.live_status, live_ok: !!l.live_ok, live_source: l.live_source, live_final: l.final_url && l.final_url !== l.live_url ? l.final_url : null } : { live_url: null, live_status: null, live_ok: false, live_source: null, live_final: null }; };
 // boot.jsonl is append-only and may hold rows for earlier shortlists; count only the current shortlist + calibration.
 const current = new Set([...shortlist.map((x) => x.full_name), ...bootAll.filter((r) => r.calibration).map((r) => r.full_name)]);
@@ -80,7 +84,7 @@ for (const [key, f] of fams) {
     source: 'static', layers: b.layers, rows: b.rows, widthPerRow: b.widthPerRow, maxWidth: b.maxWidth, branchEdges: b.branchEdges, forkNodes: b.forkNodes, joinNodes: b.joinNodes, linear: b.linear,
     milestones: s.milestones, upgrades: s.upgrades, buyables: s.buyables, challenges: s.challenges, achievements: s.achievements, clickables: s.clickables, content: s.content_total,
     math_random: s.math_random, layers_is_demo: s.layers_is_demo, boot_ok: null,
-    layer_ids: s.layer_ids, static_counts: COUNT_KEYS.map((k) => s[k]), engine_moved: !!s.engine_moved, engine_located: s.engine_located || null, ...liveOf(s.full_name) };
+    layer_ids: s.layer_ids, static_counts: COUNT_KEYS.map((k) => s[k]), engine_moved: !!s.engine_moved, engine_located: s.engine_located || null, ...liveOf(s.full_name), ...licOf(s.full_name) };
   rows.push(fromBoot(r, boot.get(s.full_name)));
 }
 // Calibration rows (local paths).
@@ -92,7 +96,7 @@ for (const cal of CALIBRATION) {
   const st = localStatic(local);
   rows.push(fromBoot({ full_name: name, short: cal.short, calibration: true, url: cal.upstream ? `https://github.com/${cal.upstream}` : null, upstream: cal.upstream, mod_name: mi.name, author: mi.author, version_num: mi.version_num, version_name: mi.version_name, engine: b.tmtNum ? 'tmt' : 'unknown', tmtNum: b.tmtNum,
     endgame: mi.modInfo_endgame || mi.endgame, pushed_at: gitDate(local), archived: null, stars: null, family_size: null, stage2_score: null, shortlist_rank: null, local_head: b.head,
-    layer_ids: st.layer_ids, static_counts: COUNT_KEYS.map((k) => st[k]), copies: [], ...liveOf(name) }, b));
+    layer_ids: st.layer_ids, static_counts: COUNT_KEYS.map((k) => st[k]), copies: [], ...liveOf(name), ...licOf(name) }, b));
 }
 // Same game as the PTR calibration row: equal live row roster (flagged so copies are not read as new games).
 const ptrRoster = JSON.stringify(boot.get('calibration:Prestige-Tree')?.boot?.census?.rowRoster || null);
@@ -123,7 +127,7 @@ for (const r of rows) {
       for (const m of r.family_members) {
         const fk = forks.get(m) || {}, sm = statBy.get(m);
         c.copies.push({ full_name: m, url: `https://github.com/${m}`, tmtNum: sm?.tmtNum || null, edited: statCountsOf.get(m) !== c.static_counts.join() || (sm?.layer_ids || []).slice().sort().join(',') !== idKey(c),
-          representative: m === r.full_name, boot_ok: m === r.full_name ? r.boot_ok : null, pushed_at: fk.pushed_at || null, stars: fk.stars ?? null, ...liveOf(m) });
+          representative: m === r.full_name, boot_ok: m === r.full_name ? r.boot_ok : null, pushed_at: fk.pushed_at || null, stars: fk.stars ?? null, ...liveOf(m), ...licOf(m) });
       }
       break;
     }
@@ -157,6 +161,7 @@ const stages = {
   boot_census_rows: cnt(bootForks, (r) => r.boot?.census),
   static_boot_agree: cnt(bootForks, (b) => { const s = statBy.get(b.full_name), c = b.boot?.census; if (!s || !c) return false;
     return [s.branchiness.layers, s.branchiness.branchEdges, s.content_total].join() === [c.layers, c.branchEdges, c.milestones + c.upgrades + c.buyables + c.challenges + c.achievements].join(); }),
+  licenses: (() => { const d = {}; for (const r of rows) d[r.license || 'none'] = (d[r.license || 'none'] || 0) + 1; return d; })(),
   live_checked: live.size, live_ok: cnt(liveRows, (r) => r.live_ok), live_dead: cnt(liveRows, (r) => !r.live_ok),
   ranked_live_ok: cnt(rows, (r) => r.live_ok), ranked_live_dead: cnt(rows, (r) => !r.live_ok && r.live_url), ranked_live_none: cnt(rows, (r) => !r.live_url),
   collapsed_families: collapsed.size, ranked_rows: rows.length,
@@ -170,8 +175,8 @@ const dev = (r) => r.dev_added == null ? '—' : `+${r.dev_added}/−${r.dev_rem
 const bootCell = (r) => r.boot_ok == null ? 'not booted' : r.boot_ok ? `ok${r.deterministic ? '' : ' ⚠nondet'}${r.policy_ok === false ? ' policy✗' : ''}${r.boot_census_empty ? ' 0-layers→static' : ''}` : `✗ ${r.boot_failed_at}`;
 const membersCell = (r) => r.calibration ? (r.copy_count ? `${r.copy_count} copies (below)` : '') : r.members > 1 ? `${r.members}: ${r.family_members.map(esc).join(', ')}` : (r.members ?? '');
 const playCell = (r) => r.live_ok ? `[▶ play](${r.live_url})` : r.live_url ? `✗ ${esc(String(r.live_status))}` : '';
-const line = (r) => `| ${r.rank} | ${r.calibration ? '🔧 ' : ''}${r.url ? `[${esc(r.full_name)}](${r.url})` : esc(r.full_name)} | ${playCell(r)} | ${esc(r.mod_name)} ${esc(r.version_num)}${r.base ? ` (base: ${r.base})` : ''}${r.same_tree_as_ptr && !r.base ? ' (= PTR tree)' : ''} | ${esc(r.tmtNum || r.engine)} | ${r.score} | ${r.layers}/${r.rows} | ${(r.widthPerRow || []).join(',')} | ${r.branchEdges} | ${r.forkNodes}/${r.joinNodes} | ${r.milestones}/${r.upgrades}/${r.buyables}/${r.challenges}/${r.achievements} | ${r.content} | ${r.endgame && !/e280000000/.test(r.endgame) ? 'yes' : 'no'} | ${(r.pushed_at || '').slice(0, 10)} | ${membersCell(r)} | ${bootCell(r)} | ${dev(r)} |`;
-const HDR = '| # | repo | play | game / version | engine | score | layers/rows | width per row | edges | fork/join | ms/upg/buy/ch/ach | content | endgame | last push | members | boot | engine deviation vs stock |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
+const line = (r) => `| ${r.rank} | ${r.calibration ? '🔧 ' : ''}${r.url ? `[${esc(r.full_name)}](${r.url})` : esc(r.full_name)} | ${playCell(r)} | ${esc(r.license || 'none')} | ${esc(r.mod_name)} ${esc(r.version_num)}${r.base ? ` (base: ${r.base})` : ''}${r.same_tree_as_ptr && !r.base ? ' (= PTR tree)' : ''} | ${esc(r.tmtNum || r.engine)} | ${r.score} | ${r.layers}/${r.rows} | ${(r.widthPerRow || []).join(',')} | ${r.branchEdges} | ${r.forkNodes}/${r.joinNodes} | ${r.milestones}/${r.upgrades}/${r.buyables}/${r.challenges}/${r.achievements} | ${r.content} | ${r.endgame && !/e280000000/.test(r.endgame) ? 'yes' : 'no'} | ${(r.pushed_at || '').slice(0, 10)} | ${membersCell(r)} | ${bootCell(r)} | ${dev(r)} |`;
+const HDR = '| # | repo | play | license | game / version | engine | score | layers/rows | width per row | edges | fork/join | ms/upg/buy/ch/ach | content | endgame | last push | members | boot | engine deviation vs stock |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
 const booted = rows.filter((r) => r.boot_ok != null);
 const provenance = `Generated ${GEN_DATE} by \`scripts/rank.mjs\` from \`data/*.jsonl\` at commit \`${DATA_COMMIT}\`${DATA_DIRTY ? ' (with uncommitted data changes)' : ''} of [${REPO_URL.replace('https://github.com/', '')}](${REPO_URL}).`;
 const METHOD = `A census of the GitHub forks of The Modding Tree and Prestige Tree (both fork lists, plus one level of forks-of-forks). Forks never pushed to are dropped; every other fork's files are read at HEAD and a small lexer counts its layers, tree rows, branch edges and content (milestones, upgrades, buyables, challenges, achievements). Forks with the same layer-id set on the same engine version form one family, represented by one fork; every family with a branching tree and some content is cloned and booted headless (200 idle ticks twice for determinism, plus a simple buy/reset policy), and its engine files are diffed against the closest stock TMT commit of its version (the port cost). Families that are exact copies of a calibration tree are folded into that tree's row. Rows are ranked by a 0–100 composite: branchiness 40, content 30, completeness 30, halved when the boot fails. The data are GitHub metadata and counts, not game code.`;
@@ -201,6 +206,7 @@ ${provenance} Every number below is read from those rows.
 | static census agrees with the live boot census (layers, branch edges, content all equal) | ${stages.static_boot_agree} of ${stages.boot_census_rows} booted forks with a census |
 | families collapsed into a calibration row as copies | ${stages.collapsed_families} (${cals.map((c) => `${c.short}: ${stages.copies[c.short].families} families / ${stages.copies[c.short].forks} forks`).join(' · ')}) |
 | ranked rows (families + calibration) | ${stages.ranked_rows}; marked \`base\`: ${cals.map((c) => `${c.short} ${stages.based_on[c.short]}`).join(' · ')} |
+| declared licenses (stage 5, GitHub's detection) | ranked rows: ${Object.entries(stages.licenses).map(([k, v]) => `${k} ${v}`).join(' · ')} |
 | live pages derived and verified (stage 4) | ${stages.live_checked} URLs — reachable ${stages.live_ok}, dead ${stages.live_dead}; of the ranked rows: ${stages.ranked_live_ok} playable, ${stages.ranked_live_dead} dead URL, ${stages.ranked_live_none} none |
 
 Engines (stage 2): ${Object.entries(engines).map(([k, v]) => `${k} ${v}`).join(' · ')}.
@@ -247,6 +253,7 @@ const COLDEFS = [
   { key: 'rank', label: 'Rank', desc: 'Position in this table, highest composite score first.', note: '1–N over the ranked rows; calibration clones are ranked alongside the forks' },
   { key: 'full_name', label: 'Repository', desc: 'The GitHub repo this row stands for — a family\'s representative fork, or a local calibration clone.', note: 'owner/name, linking to github.com; a calibration row links to its upstream repo' },
   { key: 'play', label: 'Play', desc: 'The row\'s live game page, derived from the repo\'s homepage or its GitHub Pages URL and verified with one GET (stage 4).', note: '▶ play = answered 2xx/3xx; a greyed ▶ dead names the status in its tooltip; empty = no URL could be derived' },
+  { key: 'license', label: 'License', desc: "The license GitHub detected on the repository at census time — its license.spdx_id, quoted as reported and not a legal determination; \"none\" means GitHub detected no LICENSE file, which does not free the code, since a fork of an MIT project without the file is still bound by the upstream terms.", note: 'SPDX id, e.g. MIT; NOASSERTION = a license file licensee could not match (the TMT lineage\'s MIT text carries a non-standard copyright line, so nearly every row reads this); calibration rows are read from their clone\'s own files' },
   { key: 'mod_name', label: 'Game name', desc: 'The game\'s own title, read from modInfo.name in js/mod.js.', note: 'text, exactly as the fork wrote it' },
   { key: 'version_num', label: 'Version', desc: 'The game\'s own version string, from modInfo.versionNumber.', note: 'text; the stock demo\'s "0.0" earns no completeness point' },
   { key: 'base', label: 'Base game', desc: 'The calibration tree this game is built on: its layer-id set contains that tree\'s, so it is that game plus added or changed content (README, Family collapse (c)).', note: 'PTR, TMT or upgrade-land-tmt; empty when it is not built on one' },
@@ -286,6 +293,7 @@ const COLDEFS = [
 const cols = COLDEFS.map((d) => d.key);
 const slim = rows.map((r) => ({ ...Object.fromEntries(cols.map((c) => [c, c === 'widthPerRow' ? (r[c] || []).join(',') : c === 'pushed_at' ? (r[c] || '').slice(0, 10) : c === 'play' ? (r.live_ok ? 'live' : r.live_url ? 'dead' : null) : r[c] ?? null])),
   url: r.url, calibration: r.calibration, live_url: r.live_url || null, live_ok: !!r.live_ok, live_status: r.live_status ?? null,
+  lic_n: r.license_name || null, lic_s: r.license_source || null, lic_note: r.license_note || null,
   family_members: r.calibration ? null : r.family_members, copies: r.calibration ? r.copies.map((x) => ({ n: x.full_name, u: x.url, v: x.tmtNum, e: x.edited, r: x.representative, l: x.live_ok ? x.live_url : null })) : null }));
 const hesc = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -350,6 +358,7 @@ td[data-c="widthPerRow"]{max-width:22ch}
 td[data-c="base"],td[data-c="version_num"],td[data-c="dev_stock"],td[data-c="trace_fields"]{max-width:16ch}
 td[data-c="members"]{max-width:30ch}
 td[data-c="play"],th[data-c="play"]{white-space:nowrap}
+td[data-c="license"]{max-width:18ch}
 tbody tr:nth-child(even) td{background:var(--zeb)}
 tbody tr.cal td{background:var(--hi)}
 a{color:var(--acc)}
@@ -382,8 +391,8 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 const rows=JSON.parse(document.getElementById('data').textContent);const cols=${JSON.stringify(cols)};
 const CD=${JSON.stringify(Object.fromEntries(COLDEFS.map((d) => [d.key, [d.label, d.desc, d.note]])))};
 const tip=c=>{const d=CD[c];return d?d[0]+' ('+c+') \u2014 '+d[1]+' \u00b7 '+d[2]:c};
-const text=new Set(['full_name','play','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
-const KEYCOLS=['rank','full_name','play','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok'];
+const text=new Set(['full_name','play','license','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
+const KEYCOLS=['rank','full_name','play','license','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok'];
 const LS={get(k,d){try{const v=localStorage.getItem('tmtcensus.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('tmtcensus.'+k,JSON.stringify(v))}catch(e){}}};
 let hidden=new Set((LS.get('hidden',[])||[]).filter(c=>cols.includes(c)));
 let widths=LS.get('widths',{})||{};
@@ -417,6 +426,7 @@ else if(c==='play'){if(r.live_ok){const a=link(r.live_url,'\u25b6 play');a.targe
 else if(r.live_url){const s=document.createElement('span');s.className='dead';s.textContent='\u25b6 dead';s.title=r.live_url+' \u2192 HTTP '+r.live_status;td.appendChild(s)}}
 else if(c==='members'&&r.copies)td.appendChild(r.copies.length?list(r.copies.length+' copies',r.copies.map(x=>{const a=link(x.u,x.n+(x.v?' ('+x.v+')':'')+(x.e?' ~edited':''));if(!x.l)return a;const f=document.createDocumentFragment();f.appendChild(a);const pl=link(x.l,' \u25b6');pl.target='_blank';pl.rel='noopener';pl.title='play '+x.n;f.appendChild(pl);return f})):document.createTextNode('0 copies'));
 else if(c==='members'&&r.family_members&&r.family_members.length>1)td.appendChild(list(r.family_members.length+' members',r.family_members.map(n=>link('https://github.com/'+n,n))));
+else if(c==='license'){td.textContent=r.license||'none';td.title=(r.license?(r.lic_n?r.lic_n+' \u2014 ':'')+'from '+r.lic_s:'no LICENSE file detected \u2014 which does not free the code: a fork of an MIT project without the file is still bound by the upstream terms')+(r.lic_note?' \u2014 '+r.lic_note:'')}
 else{const v=r[c]==null?'':String(r[c]);td.textContent=v;if(v&&text.has(c))td.title=v}
 tr.appendChild(td)}return tr}))}
 function boxes(){cg.replaceChildren(...cols.map(c=>{const l=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=!hidden.has(c);
