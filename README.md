@@ -8,6 +8,14 @@ Results: [`results/SUMMARY.md`](results/SUMMARY.md) (ranked table + funnel), [`r
 (the same rows), [`docs/index.html`](docs/index.html) (a static sortable table, data inline, no CDN — Pages-ready).
 Raw census rows: `data/*.jsonl`.
 
+**What is committed.** The data are **GitHub metadata and counts, not code**: repository names, dates, stars and fork
+parents from the GitHub API; per-fork counts (layers, rows, branch edges, milestones, upgrades, …), content hashes,
+engine-diff line counts, boot outcomes and state hashes. The only text taken from the forks is identifying strings
+(`modInfo` name/author, version strings, layer ids), the endgame expression (≤ 160 chars) and boot error messages
+(≤ 300 chars). No fork source is committed: the fetched raw files (`data/raw/`), the clones (`clones/`) and the
+stock-engine and CDN caches (`cache/`) are gitignored. Committed JSON names no local absolute path (`lib/util.mjs:
+scrub` writes `.` for the repo root and `~` for the home directory).
+
 Survey code, not product code. Node ≥ 18, no npm dependencies. Needs `gh` authenticated (stage 1 API calls;
 its token also raises the raw-file rate limit) and, for stages 2–3, a local clone of
 `Acamaeda/The-Modding-Tree` (default `~/CC/The-Modding-Tree`, override with `TMT_REPO`) — the stock-engine
