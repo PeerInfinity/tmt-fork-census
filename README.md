@@ -47,6 +47,18 @@ Branchiness follows `probes/branchiness.mjs`: layers with a numeric row; width p
 max width ≤ 1. **Trivial** (flagged, not dropped) = any of: ≤ 2 layers, `layers.js` identical to a stock demo
 with no other content file, no branch edges.
 
+**Moved engines** (`lib/engine.mjs`). When `js/game.js` has no `tmtNum` (404, or a fork that renamed/moved its
+engine — `js/technical/game.js`, `shared/js/game.js`, `Javascript/Game.js`), the engine is located **by content, not
+path**: every local `<script>` of `index.html` is fetched, and if none carries an engine marker, every `.js` file of the
+repo tree (one `git/trees` API call, cached). Markers: the game file defines `tmtNum:` (`TMT_VERSION`); `function
+gameLoop(`; `function updateTemp(`; the mod file defines `modInfo = {`. The located game file supplies `tmtNum`
+(`engine_located`, `engine_moved`), a moved mod file supplies `modInfo`, and for a moved engine the content set drops
+every located engine file and every script whose path-independent name (basename, lower-cased, non-alphanumerics
+dropped: `BreakEternity.js` ≡ `break_eternity.js`) is a stock engine name. `modFiles` are resolved against the fork's
+own loader prefix (`"Javascript/" + modInfo.modFiles[i]`), `js/` in stock. Re-run only these rows with
+`REDO_ENGINE=no-game-js,tmt-no-tmtNum,unknown node scripts/2-static.mjs` (removes those rows, and rows a previous run
+located, before re-censusing).
+
 ### 3. Boot
 **Shortlist score** = branch edges × content (milestones + upgrades + buyables + challenges + achievements),
 0 for trivial rows (`lib/score.mjs: shortlistScore`). Rows are grouped into **families** — the same layer-id
@@ -57,8 +69,11 @@ latest push), and every family with a shortlist score > 0 is booted (slice 1 boo
 
 Per row: `git clone --depth 1` into `clones/`; **engine deviation** = `git diff --no-index --numstat` of every
 engine file in the stock commit for the fork's `tmtNum` (`index.html`, `style.css`, `css/*.css`, `js/*.js` except
-`layers/mod/tree.js`, `js/technical/*`, `js/utils/*`) against the fork's copy (a missing file counts as all lines
-removed); also a whitespace-insensitive total and a *logic* subtotal (`game.js`, `utils.js`, `utils/*`,
+`layers/mod/tree.js`, `js/technical/*`, `js/utils/*`) against the fork's copy. A stock file missing at its path is first **relocated** — for a moved engine the located
+game / `updateTemp` file, else the fork file with the same path-independent name and extension (the one `index.html`
+loads first, then the shortest path), recorded as `relocated`; this applies to every row, so a half-moved engine is
+measured too — and a file with no relocation counts as all lines removed. A fork whose `js/game.js` has no `tmtNum`
+gets it from the engine located by content, as in stage 2; also a whitespace-insensitive total and a *logic* subtotal (`game.js`, `utils.js`, `utils/*`,
 `technical/{temp,layerSupport,displays,loader}.js`). The stock map (`lib/tmt-stock.mjs`) takes, for each
 `tmtNum`, the last first-parent commit still carrying it (2.2.1 → `360d8ac`); an unknown version resolves to the
 nearest lower one and the row says so. Many commits share one `tmtNum` (2.6.6.2 spans 2021-09 to 2024-10), so
@@ -70,7 +85,7 @@ Then four child processes (`lib/boot.mjs`, one fork per process — sloppy-mode 
 (200 ticks × `gameLoop(0.05)`, no input) — **deterministic** = same state hash and tick count, and on a miss the
 differing `player.<k>` / `player.<layer>.<k>` paths are recorded — and two **policy** legs (each tick: reset any
 row-0 layer that can reset, buy any affordable unlocked upgrade), recorded but not failing the boot. The boot:
-script order from `index.html` (inline scripts included); `loader.js` is skipped and `modInfo.modFiles` are loaded
+script order from `index.html` (inline scripts included); `loader.js` (matched case-insensitively) is skipped and `modInfo.modFiles` are loaded, with the loader's own path prefix,
 **after the last static script** (a browser runs `async=false` inserted scripts after the parser's own, and forks
 depend on it — top-level `format(...)` calls in mod files); render-only files skipped (`components.js`,
 `systemComponents.js`, `canvas.js`, `particleSystem.js`, `vue*.js`) and every top-level function they declare
@@ -82,7 +97,9 @@ name pre-stubbed (≤ 12 times; recorded as `prestubs`) — retrying `load()` in
 static numbers, flagged `boot_census_empty` — e.g. layers registered per story act read from the save); milestone `done()` `player`-field
 Proxy trace (distinct fields). Hygiene: `process`, `require`, `fetch`, `Buffer` are deleted from the global
 before any game file runs and children get a scrubbed environment — this runs other people's code.
-Time box: `BUDGET_MIN` (default 180) wall minutes; the row count that ran is in the log and SUMMARY.
+Time box: `BUDGET_MIN` (default 180) wall minutes; the row count that ran is in the log and SUMMARY. Re-boot rows with
+`REBOOT_LOCATED=1` (every row whose engine stage 2 located by content) or `REBOOT=o/r,o/r`; their old lines are removed
+first.
 
 ## Rank
 `lib/score.mjs: composite`, 0–100:
