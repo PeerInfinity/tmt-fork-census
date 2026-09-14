@@ -239,39 +239,110 @@ const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TMT Fork Census</title>
 <style>
-:root{--bg:#fbfaf7;--fg:#1d1d1b;--mut:#6b6a65;--line:#e3e1da;--hi:#fff3c4;--acc:#2d6a4f}
-@media (prefers-color-scheme:dark){:root{--bg:#161614;--fg:#e8e6df;--mut:#9a988f;--line:#2e2d29;--hi:#3a3420;--acc:#74c69d}}
-body{margin:0;padding-block:24px;padding-inline:16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
-h1{font-size:20px;margin:0 0 4px}p{color:var(--mut);margin:0 0 12px;max-width:80ch}
-input{font:inherit;padding:6px 8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:4px;width:min(320px,100%)}
-.wrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:6px}
-table{border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap}
-th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
-th{position:sticky;top:0;background:var(--bg);cursor:pointer;user-select:none;font-weight:600}
-td.t,th.t{text-align:left}tr.cal td{background:var(--hi)}a{color:var(--acc)}
-details{white-space:normal;max-width:48ch;text-align:left}summary{cursor:pointer;white-space:nowrap}
-</style></head><body>
+:root{color-scheme:dark;--bg:#151513;--bg2:#20201c;--zeb:#1b1b18;--fg:#e8e6df;--mut:#9c9a91;--line:#35342f;--hi:#3d3620;--acc:#8fd7b0;--btn:#26261f}
+:root[data-theme="light"]{color-scheme:light;--bg:#fbfaf7;--bg2:#f1efe8;--zeb:#f6f5f1;--fg:#1d1d1b;--mut:#67665f;--line:#e0ded6;--hi:#fff3c4;--acc:#1a5e3f;--btn:#eeece4}
+*{box-sizing:border-box}
+body{margin:0;padding-block:24px;padding-inline:16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column}
+h1{font-size:20px;margin:0 0 4px}
+p{color:var(--mut);margin:0 0 12px;max-width:80ch}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 8px;max-width:100%}
+button,input{font:inherit;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+button{background:var(--btn);cursor:pointer}
+button:hover{border-color:var(--mut)}
+input{background:var(--bg);width:min(320px,100%)}
+.cols{border:1px solid var(--line);border-radius:4px;background:var(--btn);max-width:100%;margin:0 0 4px}
+.cols>summary{cursor:pointer;padding:6px 8px;user-select:none;list-style:none}
+.cols>summary::-webkit-details-marker{display:none}
+.cols>summary::before{content:"\\25b8 ";color:var(--mut)}
+.cols[open]>summary::before{content:"\\25be "}
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:2px 12px;padding:8px;border-top:1px solid var(--line);max-height:40vh;overflow:auto}
+.cg label{display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cg input{width:auto;padding:0}
+.n{color:var(--mut);font-size:12px}
+.wrap{overflow:auto;max-width:100%;flex:1 1 auto;min-height:340px;margin-top:4px;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top;overflow:hidden;text-overflow:ellipsis}
+th{position:sticky;top:0;z-index:2;background:var(--bg2);cursor:pointer;user-select:none;font-weight:600;touch-action:none}
+th.rz{cursor:col-resize}
+th .rs{position:absolute;top:0;right:0;width:5px;height:100%;pointer-events:none;background:var(--line)}
+th.rz .rs{background:var(--acc)}
+td.t,th.t{text-align:left}
+td[data-c="full_name"]{max-width:24ch}
+td[data-c="mod_name"]{max-width:22ch}
+td[data-c="widthPerRow"]{max-width:22ch}
+td[data-c="base"],td[data-c="version_num"],td[data-c="dev_stock"],td[data-c="trace_fields"]{max-width:16ch}
+td[data-c="members"]{max-width:30ch}
+tbody tr:nth-child(even) td{background:var(--zeb)}
+tbody tr.cal td{background:var(--hi)}
+a{color:var(--acc)}
+details.m{white-space:normal;max-width:100%;text-align:left}
+details.m>summary{cursor:pointer;white-space:nowrap}
+</style>
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tmtcensus.theme')==='"light"'?'light':'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
+</head><body>
 <h1>TMT Fork Census</h1>
 <p>${hesc(METHOD)}</p>
-<p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort.</p>
+<p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort; drag a header's right edge to resize it (double-click that edge to reset); the table scrolls sideways inside its own frame.</p>
+<div class="bar">
 <input id="q" placeholder="filter by repo or game name" aria-label="filter">
-<div class="wrap"><table><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
+<button id="theme" type="button">Light</button>
+<button id="all" type="button">All columns</button>
+<button id="key" type="button">Key columns</button>
+<button id="rw" type="button">Reset widths</button>
+<span class="n" id="count"></span>
+</div>
+<details class="cols"><summary>Columns</summary><div class="cg" id="cg"></div></details>
+<div class="wrap" id="wrap"><table id="tbl"><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
+<style id="cw"></style>
 <script type="application/json" id="data">${JSON.stringify(slim).replace(/</g, '\\u003c')}</script>
 <script>
 const rows=JSON.parse(document.getElementById('data').textContent);const cols=${JSON.stringify(cols)};
 const text=new Set(['full_name','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
-let key='rank',dir=1;const h=document.getElementById('h'),b=document.getElementById('b'),q=document.getElementById('q');
-cols.forEach(c=>{const th=document.createElement('th');th.textContent=c;if(text.has(c))th.className='t';th.onclick=()=>{dir=key===c?-dir:(text.has(c)||c==='rank'?1:-1);key=c;draw()};h.appendChild(th)});
+const KEYCOLS=['rank','full_name','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok'];
+const LS={get(k,d){try{const v=localStorage.getItem('tmtcensus.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('tmtcensus.'+k,JSON.stringify(v))}catch(e){}}};
+let hidden=new Set((LS.get('hidden',[])||[]).filter(c=>cols.includes(c)));
+let widths=LS.get('widths',{})||{};
+let key='rank',dir=1,dragging=false;
+const h=document.getElementById('h'),b=document.getElementById('b'),q=document.getElementById('q'),cg=document.getElementById('cg'),cw=document.getElementById('cw'),cnt=document.getElementById('count');
+const vis=()=>cols.filter(c=>!hidden.has(c));
+function applyWidths(){let s='';for(const c of cols){const w=widths[c];if(w)s+='th[data-c="'+c+'"],td[data-c="'+c+'"]{width:'+w+'px;min-width:'+w+'px;max-width:'+w+'px}'}cw.textContent=s}
+const EDGE=8,near=(th,x)=>th.getBoundingClientRect().right-x<=EDGE;let dragged=false;
+function head(){h.replaceChildren(...vis().map(c=>{const th=document.createElement('th');th.dataset.c=c;th.className=(text.has(c)?'t':'');th.title=c+' \\u2014 click to sort, drag the right edge to resize, double-click it to reset';
+th.appendChild(document.createTextNode(c+(key===c?(dir>0?' \\u25b2':' \\u25bc'):'')));
+const rs=document.createElement('span');rs.className='rs';th.appendChild(rs);
+th.addEventListener('pointermove',e=>{if(!dragging)th.classList.toggle('rz',near(th,e.clientX))});
+th.addEventListener('pointerleave',()=>{if(!dragging)th.classList.remove('rz')});
+th.addEventListener('dblclick',e=>{if(!near(th,e.clientX))return;e.preventDefault();delete widths[c];LS.set('widths',widths);applyWidths()});
+th.addEventListener('pointerdown',e=>{if(!near(th,e.clientX))return;e.preventDefault();dragging=true;dragged=false;
+const sx=e.clientX,sw=th.getBoundingClientRect().width;
+const mv=ev=>{dragged=true;widths[c]=Math.max(40,Math.round(sw+ev.clientX-sx));applyWidths()};
+const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);dragging=false;th.classList.remove('rz');if(dragged)LS.set('widths',widths)};
+window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up)});
+th.addEventListener('click',e=>{if(dragged){dragged=false;return}if(near(th,e.clientX))return;dir=key===c?-dir:(text.has(c)||c==='rank'?1:-1);key=c;head();draw()});
+return th}))}
 function link(u,t){const a=document.createElement('a');a.href=u;a.textContent=t;return a}
-function list(label,items){const d=document.createElement('details'),s=document.createElement('summary');s.textContent=label;d.appendChild(s);items.forEach((it,i)=>{if(i)d.appendChild(document.createTextNode(', '));d.appendChild(it)});return d}
-function draw(){const f=q.value.toLowerCase();const rs=rows.filter(r=>!f||(r.full_name+' '+(r.mod_name||'')+' '+(r.copies||[]).map(x=>x.n).join(' ')+' '+(r.family_members||[]).join(' ')).toLowerCase().includes(f));
+function list(label,items){const d=document.createElement('details');d.className='m';const s=document.createElement('summary');s.textContent=label;d.appendChild(s);items.forEach((it,i)=>{if(i)d.appendChild(document.createTextNode(', '));d.appendChild(it)});return d}
+function draw(){const f=q.value.toLowerCase();const shown=vis();
+const rs=rows.filter(r=>!f||(r.full_name+' '+(r.mod_name||'')+' '+(r.copies||[]).map(x=>x.n).join(' ')+' '+(r.family_members||[]).join(' ')).toLowerCase().includes(f));
 rs.sort((x,y)=>{const a=x[key],c=y[key];if(a==null)return 1;if(c==null)return -1;return (a>c?1:a<c?-1:0)*dir});
-b.replaceChildren(...rs.map(r=>{const tr=document.createElement('tr');if(r.calibration)tr.className='cal';for(const c of cols){const td=document.createElement('td');if(text.has(c))td.className='t';
-if(c==='full_name'&&r.url)td.appendChild(link(r.url,r.full_name));
+cnt.textContent=rs.length+' of '+rows.length+' rows, '+shown.length+' of '+cols.length+' columns';
+b.replaceChildren(...rs.map(r=>{const tr=document.createElement('tr');if(r.calibration)tr.className='cal';for(const c of shown){const td=document.createElement('td');td.dataset.c=c;if(text.has(c))td.className='t';
+if(c==='full_name'&&r.url){td.appendChild(link(r.url,r.full_name));td.title=r.full_name}
 else if(c==='members'&&r.copies)td.appendChild(r.copies.length?list(r.copies.length+' copies',r.copies.map(x=>link(x.u,x.n+(x.v?' ('+x.v+')':'')+(x.e?' ~edited':'')))):document.createTextNode('0 copies'));
 else if(c==='members'&&r.family_members&&r.family_members.length>1)td.appendChild(list(r.family_members.length+' members',r.family_members.map(n=>link('https://github.com/'+n,n))));
-else td.textContent=r[c]==null?'':String(r[c]);tr.appendChild(td)}return tr}))}
-q.oninput=draw;draw();
+else{const v=r[c]==null?'':String(r[c]);td.textContent=v;if(v&&text.has(c))td.title=v}
+tr.appendChild(td)}return tr}))}
+function boxes(){cg.replaceChildren(...cols.map(c=>{const l=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=!hidden.has(c);
+cb.onchange=()=>{if(cb.checked)hidden.delete(c);else hidden.add(c);LS.set('hidden',[...hidden]);head();draw()};
+l.appendChild(cb);l.appendChild(document.createTextNode(c));return l}))}
+function setHidden(s){hidden=s;LS.set('hidden',[...hidden]);boxes();head();draw()}
+document.getElementById('all').onclick=()=>setHidden(new Set());
+document.getElementById('key').onclick=()=>setHidden(new Set(cols.filter(c=>!KEYCOLS.includes(c))));
+document.getElementById('rw').onclick=()=>{widths={};LS.set('widths',widths);applyWidths()};
+const tb=document.getElementById('theme');
+const paint=()=>{tb.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'Light':'Dark'};
+tb.onclick=()=>{const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);LS.set('theme',t);paint()};
+paint();q.oninput=draw;applyWidths();boxes();head();draw();
 </script></body></html>`;
 fs.mkdirSync(p('docs'), { recursive: true });
 fs.writeFileSync(p('docs/index.html'), html);
