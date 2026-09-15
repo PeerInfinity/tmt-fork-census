@@ -150,6 +150,20 @@ Calibration rows have no GitHub repo of their own, so their licenses are read fr
 PTR and stock TMT both carry the two MIT texts → `MIT`; `upgrade-land-tmt` carries TMT's MIT for the engine while
 Upgrade Land's own data ships with no license of its own → `MIT (engine) / none (data)`.
 
+**Read as text, the two chosen games are plain MIT.** `lib/license-text.mjs: classifyLicenseText` answers the
+question licensee does not: it strips the copyright line, normalises whitespace, and compares what is left against
+the canonical MIT text (this repository's own `LICENSE`). Measured on all four license files of the two games —
+`Jacorb90/Prestige-Tree` (the PTR calibration clone) and `Justcubing97/JC97sSomethingTree`, which GitHub reports
+as `MIT` and `NOASSERTION` respectively — every one is the MIT permission and warranty text **verbatim**, and the
+only difference is the copyright line: `LICENSE` reads `Modding Tree Copyright (c) 2020 Acamaeda` and
+`Prestige-tree-license` reads `Prestige Tree Copyright (c) 2020 Jacorb` in both repos (the two `LICENSE` files are
+byte-identical to each other, as are the two `Prestige-tree-license` files). So the `NOASSERTION` on the Something
+Tree row is the detector refusing to name a file whose copyright line it cannot parse, not a repository under
+unknown terms. `scripts/manifest.mjs` runs this per-file check over every license-like file at the clone root
+(`LICENSE*`, `*license*`, `COPYING*`) and reports both GitHub's `spdx_id` and its own verdict; a text that keeps
+the MIT paragraphs but changes them reads `MIT-modified`, and anything else `other`. This is a text comparison,
+not legal advice.
+
 ## Columns
 
 The ranked table's columns, in order — the same definitions drive the page's header tooltips and its Columns
