@@ -253,7 +253,6 @@ const COLDEFS = [
   { key: 'rank', label: 'Rank', desc: 'Position in this table, highest composite score first.', note: '1–N over the ranked rows; calibration clones are ranked alongside the forks' },
   { key: 'full_name', label: 'Repository', desc: 'The GitHub repo this row stands for — a family\'s representative fork, or a local calibration clone.', note: 'owner/name, linking to github.com; a calibration row links to its upstream repo' },
   { key: 'play', label: 'Play', desc: 'The row\'s live game page, derived from the repo\'s homepage or its GitHub Pages URL and verified with one GET (stage 4).', note: '▶ play = answered 2xx/3xx; a greyed ▶ dead names the status in its tooltip; empty = no URL could be derived' },
-  { key: 'license', label: 'License', desc: "The license GitHub detected on the repository at census time — its license.spdx_id, quoted as reported and not a legal determination; \"none\" means GitHub detected no LICENSE file, which does not free the code, since a fork of an MIT project without the file is still bound by the upstream terms.", note: 'SPDX id, e.g. MIT; NOASSERTION = a license file licensee could not match (the TMT lineage\'s MIT text carries a non-standard copyright line, so nearly every row reads this); calibration rows are read from their clone\'s own files' },
   { key: 'mod_name', label: 'Game name', desc: 'The game\'s own title, read from modInfo.name in js/mod.js.', note: 'text, exactly as the fork wrote it' },
   { key: 'version_num', label: 'Version', desc: 'The game\'s own version string, from modInfo.versionNumber.', note: 'text; the stock demo\'s "0.0" earns no completeness point' },
   { key: 'base', label: 'Base game', desc: 'The calibration tree this game is built on: its layer-id set contains that tree\'s, so it is that game plus added or changed content (README, Family collapse (c)).', note: 'PTR, TMT or upgrade-land-tmt; empty when it is not built on one' },
@@ -289,6 +288,7 @@ const COLDEFS = [
   { key: 'dev_stock', label: 'Stock baseline', desc: 'Which stock TMT commit the engine deviation was measured against (many commits share one tmtNum, so it is the closest of them).', note: 'version@commit; "(nearest lower)" when the fork\'s version is not in the stock map' },
   { key: 'engine_moved', label: 'Engine moved', desc: 'Whether the fork moved its engine files off the stock paths, so they had to be located by content before diffing.', note: 'true / false' },
   { key: 'same_tree_as_ptr', label: 'Same tree as PTR', desc: 'Whether the booted game\'s live row roster is exactly Prestige Tree Rewritten\'s — flagged so a near-copy is not read as a new game.', note: 'true / false' },
+  { key: 'license', label: 'License', desc: "The license GitHub detected on the repository at census time — its license.spdx_id, quoted as reported and not a legal determination; \"none\" means GitHub detected no LICENSE file, which does not free the code, since a fork of an MIT project without the file is still bound by the upstream terms.", note: 'SPDX id, e.g. MIT; NOASSERTION = a license file licensee could not match (the TMT lineage\'s MIT text carries a non-standard copyright line, so nearly every row reads this); calibration rows are read from their clone\'s own files' },
 ];
 const cols = COLDEFS.map((d) => d.key);
 const slim = rows.map((r) => ({ ...Object.fromEntries(cols.map((c) => [c, c === 'widthPerRow' ? (r[c] || []).join(',') : c === 'pushed_at' ? (r[c] || '').slice(0, 10) : c === 'play' ? (r.live_ok ? 'live' : r.live_url ? 'dead' : null) : r[c] ?? null])),
@@ -393,7 +393,7 @@ const rows=JSON.parse(document.getElementById('data').textContent);const cols=${
 const CD=${JSON.stringify(Object.fromEntries(COLDEFS.map((d) => [d.key, [d.label, d.desc, d.note]])))};
 const tip=c=>{const d=CD[c];return d?d[0]+' ('+c+') \u2014 '+d[1]+' \u00b7 '+d[2]:c};
 const text=new Set(['full_name','play','license','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
-const KEYCOLS=['rank','full_name','play','license','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok'];
+const KEYCOLS=['rank','full_name','play','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok','license'];
 const LS={get(k,d){try{const v=localStorage.getItem('tmtcensus.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('tmtcensus.'+k,JSON.stringify(v))}catch(e){}}};
 let hidden=new Set((LS.get('hidden',[])||[]).filter(c=>cols.includes(c)));
 let widths=LS.get('widths',{})||{};
