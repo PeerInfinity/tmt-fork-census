@@ -38,6 +38,20 @@ gitignored — the raw cache is third-party code).
 | 5. license | `node scripts/5-license.mjs` (`--recheck`) | `data/license.jsonl` |
 | rank | `node scripts/rank.mjs` | `results/SUMMARY.md`, `results/table.json`, `docs/index.html` |
 
+**Manifest** (not a stage). `node scripts/manifest.mjs <owner/repo | calibration:Name> --id <id> [--out <file>]`
+emits one JSON object (schema 1, stdout by default) describing a single game for a loader: its `modInfo`
+name / version / author, the upstream repo, branch and **full** commit sha, the engine version with its stock
+baseline and deviation, the local script list in `index.html` order (render-only files included and marked),
+`modInfo.modFiles` with the loader's own path prefix, every external URL classified `vendor` (Vue, number and
+notation libraries) or `drop` (fonts, analytics), the save key and the rule that produces it (`modInfo.id`, or
+2.5+'s `getModID`), the headless facts (prestubs, render stubs, the idle state hash after 200 ticks,
+deterministic) and the per-file license verdict. Every value is read back out of `data/*.jsonl`,
+`results/table.json` and the clone — nothing is recomputed and nothing is invented; a field the rows do not
+carry is written `null`. The manifest is therefore a **pin of what the census observed** at the recorded
+commit, not a live description: a loader parses the game's own `index.html` and can compare what it finds
+against this file. Manifests are not committed here (the loader repo is their home), and this script reads
+`data/` — it never writes it.
+
 ### 1. List
 Both roots (`Acamaeda/The-Modding-Tree`, `Jacorb90/Prestige-Tree`), `GET /repos/{r}/forks?per_page=100`
 paginated, recursing one level into every fork with `forks_count > 0`. **The Modding Tree is itself a fork of
