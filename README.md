@@ -4,6 +4,8 @@ A census of the **The Modding Tree / Prestige Tree** fork family on GitHub: whic
 *branching* prestige tree, enough content to randomize, and some sign of completeness — and, for the
 shortlist, how far each one's engine deviates from stock TMT (the cost of porting it to a newer engine).
 
+**AI disclosure.** The code, the documentation and the results page in this repository were AI-generated (Claude Code sessions directed by PeerInfinity, who set the questions and reviewed the output). Every number is produced by the scripts here, run against the GitHub API and the forks' own source files, and can be regenerated from `data/*.jsonl`.
+
 Results: [`results/SUMMARY.md`](results/SUMMARY.md) (ranked table + funnel), [`results/table.json`](results/table.json)
 (the same rows), [`docs/index.html`](docs/index.html) (a static sortable table, data inline, no CDN — Pages-ready).
 Raw census rows: `data/*.jsonl`.

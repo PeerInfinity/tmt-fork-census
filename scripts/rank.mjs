@@ -371,6 +371,7 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 <details class="about" id="about"><summary><h1>TMT Fork Census</h1> <span class="n">about \u00b7 methodology, provenance, how to read the table</span></summary><div class="ab">
 <p>${hesc(METHOD)}</p>
 <p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). The <em>play</em> column links the repo's verified live page (stage 4); a greyed marker means the page exists in the repo's metadata but did not answer. Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort; drag a header's right edge to resize it (double-click that edge to reset); the table scrolls sideways inside its own frame.</p>
+<p><strong>AI disclosure.</strong> The census scripts, the documentation and this page were AI-generated (Claude Code sessions directed by PeerInfinity, who set the questions and reviewed the output); every number here is produced by those scripts from the GitHub API and the forks' own source files, and can be regenerated from the repo.</p>
 <h2>Columns</h2>
 <dl class="lg">${COLDEFS.map((d) => `<dt><code>${hesc(d.key)}</code></dt><dd><b>${hesc(d.label)}</b> \u2014 ${hesc(d.desc)} <span class="n">${hesc(d.note)}</span></dd>`).join('')}</dl>
 </div></details>
