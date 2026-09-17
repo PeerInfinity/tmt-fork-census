@@ -31,6 +31,10 @@ const licOf = (name) => { const l = lic.get(name); return { license: l ? l.licen
 const loaderRows = readJsonl(p('data/loader.jsonl'));
 const loader = latestBy(loaderRows);
 const loaderOf = (name) => { const l = loader.get(name); return { loader_url: l ? l.loader_url : null, loader_mobile_url: l ? l.loader_mobile_url || null : null, loader_id: l ? l.loader_id : null, loader_commit: l ? l.loader_commit : null }; };
+// Stage 7 — how big the game is (scripts/7-size.mjs). Two different numbers; see that file.
+const sizeRows = readJsonl(p('data/size.jsonl'));
+const sizes = latestBy(sizeRows);
+const sizeOf = (name) => { const z = sizes.get(name); return { checkout_bytes: z ? z.checkout_bytes : null, checkout_files: z ? z.checkout_files : null, repo_kb: z ? z.repo_kb : null }; };
 const LOADER_COMMITS = [...new Set(loaderRows.map((r) => r.loader_commit))];
 const LOADER_BASES = [...new Set(loaderRows.map((r) => r.loader_url.slice(0, r.loader_url.lastIndexOf('?mod='))))];
 if (LOADER_COMMITS.length > 1 || LOADER_BASES.length > 1) throw new Error('data/loader.jsonl mixes loader commits or bases: ' + [...LOADER_COMMITS, ...LOADER_BASES].join(', '));
@@ -92,7 +96,7 @@ for (const [key, f] of fams) {
     source: 'static', layers: b.layers, rows: b.rows, widthPerRow: b.widthPerRow, maxWidth: b.maxWidth, branchEdges: b.branchEdges, forkNodes: b.forkNodes, joinNodes: b.joinNodes, linear: b.linear,
     milestones: s.milestones, upgrades: s.upgrades, buyables: s.buyables, challenges: s.challenges, achievements: s.achievements, clickables: s.clickables, content: s.content_total,
     math_random: s.math_random, layers_is_demo: s.layers_is_demo, boot_ok: null,
-    layer_ids: s.layer_ids, static_counts: COUNT_KEYS.map((k) => s[k]), engine_moved: !!s.engine_moved, engine_located: s.engine_located || null, ...liveOf(s.full_name), ...loaderOf(s.full_name), ...licOf(s.full_name) };
+    layer_ids: s.layer_ids, static_counts: COUNT_KEYS.map((k) => s[k]), engine_moved: !!s.engine_moved, engine_located: s.engine_located || null, ...liveOf(s.full_name), ...loaderOf(s.full_name), ...licOf(s.full_name), ...sizeOf(s.full_name) };
   rows.push(fromBoot(r, boot.get(s.full_name)));
 }
 // Calibration rows (local paths).
@@ -104,7 +108,7 @@ for (const cal of CALIBRATION) {
   const st = localStatic(local);
   rows.push(fromBoot({ full_name: name, short: cal.short, calibration: true, url: cal.upstream ? `https://github.com/${cal.upstream}` : null, upstream: cal.upstream, mod_name: mi.name, author: mi.author, version_num: mi.version_num, version_name: mi.version_name, engine: b.tmtNum ? 'tmt' : 'unknown', tmtNum: b.tmtNum,
     endgame: mi.modInfo_endgame || mi.endgame, pushed_at: gitDate(local), archived: null, stars: null, family_size: null, stage2_score: null, shortlist_rank: null, local_head: b.head,
-    layer_ids: st.layer_ids, static_counts: COUNT_KEYS.map((k) => st[k]), copies: [], ...liveOf(name), ...loaderOf(name), ...licOf(name) }, b));
+    layer_ids: st.layer_ids, static_counts: COUNT_KEYS.map((k) => st[k]), copies: [], ...liveOf(name), ...loaderOf(name), ...licOf(name), ...sizeOf(name) }, b));
 }
 // Same game as the PTR calibration row: equal live row roster (flagged so copies are not read as new games).
 const ptrRoster = JSON.stringify(boot.get('calibration:Prestige-Tree')?.boot?.census?.rowRoster || null);
@@ -188,8 +192,12 @@ const membersCell = (r) => r.calibration ? (r.copy_count ? `${r.copy_count} copi
 const playCell = (r) => r.live_ok ? `[▶ play](${r.live_url})` : r.live_url ? `✗ ${esc(String(r.live_status))}` : '';
 const loaderCell = (r) => r.loader_url ? `[▶ loader](${r.loader_url})` : '';
 const mobileCell = (r) => r.loader_mobile_url ? `[▶ mobile](${r.loader_mobile_url})` : '';
-const line = (r) => `| ${r.rank} | ${r.calibration ? '🔧 ' : ''}${r.url ? `[${esc(r.full_name)}](${r.url})` : esc(r.full_name)} | ${playCell(r)} | ${loaderCell(r)} | ${mobileCell(r)} | ${esc(r.license || 'none')} | ${esc(r.mod_name)} ${esc(r.version_num)}${r.base ? ` (base: ${r.base})` : ''}${r.same_tree_as_ptr && !r.base ? ' (= PTR tree)' : ''} | ${esc(r.tmtNum || r.engine)} | ${r.score} | ${r.layers}/${r.rows} | ${(r.widthPerRow || []).join(',')} | ${r.branchEdges} | ${r.forkNodes}/${r.joinNodes} | ${r.milestones}/${r.upgrades}/${r.buyables}/${r.challenges}/${r.achievements} | ${r.content} | ${r.endgame && !/e280000000/.test(r.endgame) ? 'yes' : 'no'} | ${(r.pushed_at || '').slice(0, 10)} | ${membersCell(r)} | ${bootCell(r)} | ${dev(r)} |`;
-const HDR = '| # | repo | play | loader | mobile | license | game / version | engine | score | layers/rows | width per row | edges | fork/join | ms/upg/buy/ch/ach | content | endgame | last push | members | boot | engine deviation vs stock |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
+// one decimal under 100 MB, none above; a game under 0.1 MB still reads as a number, never as 0
+const mb = (b) => b == null ? '' : b >= 1e8 ? `${Math.round(b / 1e6)}` : b >= 1e5 ? `${(b / 1e6).toFixed(1)}` : `${(b / 1e6).toFixed(2)}`;
+const sizeCell = (r) => mb(r.checkout_bytes);
+const repoSizeCell = (r) => r.repo_kb == null ? '' : mb(r.repo_kb * 1024);
+const line = (r) => `| ${r.rank} | ${r.calibration ? '🔧 ' : ''}${r.url ? `[${esc(r.full_name)}](${r.url})` : esc(r.full_name)} | ${playCell(r)} | ${loaderCell(r)} | ${mobileCell(r)} | ${sizeCell(r)} | ${repoSizeCell(r)} | ${esc(r.license || 'none')} | ${esc(r.mod_name)} ${esc(r.version_num)}${r.base ? ` (base: ${r.base})` : ''}${r.same_tree_as_ptr && !r.base ? ' (= PTR tree)' : ''} | ${esc(r.tmtNum || r.engine)} | ${r.score} | ${r.layers}/${r.rows} | ${(r.widthPerRow || []).join(',')} | ${r.branchEdges} | ${r.forkNodes}/${r.joinNodes} | ${r.milestones}/${r.upgrades}/${r.buyables}/${r.challenges}/${r.achievements} | ${r.content} | ${r.endgame && !/e280000000/.test(r.endgame) ? 'yes' : 'no'} | ${(r.pushed_at || '').slice(0, 10)} | ${membersCell(r)} | ${bootCell(r)} | ${dev(r)} |`;
+const HDR = '| # | repo | play | loader | mobile | size MB | repo MB | license | game / version | engine | score | layers/rows | width per row | edges | fork/join | ms/upg/buy/ch/ach | content | endgame | last push | members | boot | engine deviation vs stock |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
 const booted = rows.filter((r) => r.boot_ok != null);
 const LOADER_REPO_URL = 'https://github.com/PeerInfinity/tmt-loader';
 const provenance = `Generated ${GEN_DATE} by \`scripts/rank.mjs\` from \`data/*.jsonl\` at commit \`${DATA_COMMIT}\`${DATA_DIRTY ? ' (with uncommitted data changes)' : ''} of [${REPO_URL.replace('https://github.com/', '')}](${REPO_URL}).${LOADER_COMMIT ? ` The \`loader\` and \`mobile\` columns read [tmt-loader](${LOADER_REPO_URL})'s manifests at commit \`${LOADER_COMMIT.slice(0, 7)}\` (stage 6) and link ${LOADER_BASE} — the second with \`&mobile=1\`, the loader's mobile layout.` : ''}`;
@@ -270,6 +278,8 @@ const COLDEFS = [
   { key: 'play', label: 'Play', desc: 'The row\'s live game page, derived from the repo\'s homepage or its GitHub Pages URL and verified with one GET (stage 4).', note: '▶ play = answered 2xx/3xx; a greyed ▶ dead names the status in its tooltip; empty = no URL could be derived' },
   { key: 'loader', label: 'Loader', desc: 'The same game loaded through tmt-loader on its own engine (no CDN, namespaced save; automation only with ?automation=1) — for every ranked row the loader hosts at the pinned commit (stage 6).', note: '▶ loader = a URL; empty = not hosted' },
   { key: 'loader_mobile', label: 'Mobile', desc: 'The same loader URL with ?mobile=1 — the loader\'s mobile layout: one column, the tree until you open a layer and then the layer full width, a bottom nav bar and 44px tap targets. The engines themselves ship no @media query at all. Present only when the pinned loader commit carries the mode (stage 6).', note: '▶ mobile = a URL; empty = not hosted, or the pinned loader predates the mode' },
+  { key: 'checkout_bytes', label: 'Game size', desc: 'How big the game itself is: the bytes of the working tree at the commit the census booted, .git excluded (stage 7). This is what a copy of it costs to host — what `git subtree add` puts in a loader — and it is the number to judge "is this small enough" by.', note: 'MB; empty when the repo was not cloned on the machine that ran the stage' },
+  { key: 'repo_kb', label: 'Repository size', desc: 'What GitHub reports for the repository: packed, and INCLUDING ALL HISTORY (stage 1\'s size field). It is what cloning the fork costs, and it is NOT a proxy for the game size beside it — over these rows the two diverge by a median of 3x and a maximum of 34x, in both directions (a heavy history reads far larger than its game; a pile of incompressible PNGs reads smaller).', note: 'MB, converted from the API\'s KB' },
   { key: 'mod_name', label: 'Game name', desc: 'The game\'s own title, read from modInfo.name in js/mod.js.', note: 'text, exactly as the fork wrote it' },
   { key: 'version_num', label: 'Version', desc: 'The game\'s own version string, from modInfo.versionNumber.', note: 'text; the stock demo\'s "0.0" earns no completeness point' },
   { key: 'base', label: 'Base game', desc: 'The calibration tree this game is built on: its layer-id set contains that tree\'s, so it is that game plus added or changed content (STAGES.md, Family collapse (c)).', note: 'PTR, TMT or upgrade-land-tmt; empty when it is not built on one' },
@@ -309,6 +319,7 @@ const COLDEFS = [
 ];
 const cols = COLDEFS.map((d) => d.key);
 const slim = rows.map((r) => ({ ...Object.fromEntries(cols.map((c) => [c, c === 'widthPerRow' ? (r[c] || []).join(',') : c === 'pushed_at' ? (r[c] || '').slice(0, 10) : c === 'play' ? (r.live_ok ? 'live' : r.live_url ? 'dead' : null) : c === 'loader' ? (r.loader_url ? 'hosted' : null) : c === 'loader_mobile' ? (r.loader_mobile_url ? 'hosted' : null) : r[c] ?? null])),
+  checkout_files: r.checkout_files ?? null,
   url: r.url, calibration: r.calibration, live_url: r.live_url || null, live_ok: !!r.live_ok, live_status: r.live_status ?? null, loader_url: r.loader_url || null, loader_mobile_url: r.loader_mobile_url || null,
   lic_n: r.license_name || null, lic_s: r.license_source || null, lic_note: r.license_note || null,
   family_members: r.calibration ? null : r.family_members, copies: r.calibration ? r.copies.map((x) => ({ n: x.full_name, u: x.url, v: x.tmtNum, e: x.edited, r: x.representative, l: x.live_ok ? x.live_url : null })) : null }));
@@ -435,6 +446,8 @@ window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up
 th.addEventListener('click',e=>{if(dragged){dragged=false;return}if(near(th,e.clientX))return;dir=key===c?-dir:(text.has(c)||c==='rank'?1:-1);key=c;head();draw()});
 return th}))}
 function link(u,t){const a=document.createElement('a');a.href=u;a.textContent=t;return a}
+// same rule as the markdown table: one decimal under 100 MB, none above, and a small game never reads as 0
+function fmtMB(b){return b>=1e8?String(Math.round(b/1e6)):b>=1e5?(b/1e6).toFixed(1):(b/1e6).toFixed(2)}
 function list(label,items){const d=document.createElement('details');d.className='m';const s=document.createElement('summary');s.textContent=label;d.appendChild(s);items.forEach((it,i)=>{if(i)d.appendChild(document.createTextNode(', '));d.appendChild(it)});return d}
 function draw(){const f=q.value.toLowerCase();const shown=vis();
 const rs=rows.filter(r=>!f||(r.full_name+' '+(r.mod_name||'')+' '+(r.copies||[]).map(x=>x.n).join(' ')+' '+(r.family_members||[]).join(' ')).toLowerCase().includes(f));
@@ -445,6 +458,8 @@ if(c==='full_name'&&r.url){td.appendChild(link(r.url,r.full_name));td.title=r.fu
 else if(c==='play'){if(r.live_ok){const a=link(r.live_url,'\u25b6 play');a.target='_blank';a.rel='noopener';a.title='play '+(r.mod_name||r.full_name)+' at '+r.live_url;td.appendChild(a)}
 else if(r.live_url){const s=document.createElement('span');s.className='dead';s.textContent='\u25b6 dead';s.title=r.live_url+' \u2192 HTTP '+r.live_status;td.appendChild(s)}}
 else if(c==='loader'){if(r.loader_url){const a=link(r.loader_url,'\u25b6 loader');a.target='_blank';a.rel='noopener';a.title='load '+(r.mod_name||r.full_name)+' through tmt-loader at '+r.loader_url;td.appendChild(a)}}
+else if(c==='checkout_bytes'){if(r.checkout_bytes!=null){td.textContent=fmtMB(r.checkout_bytes);td.title=r.checkout_bytes.toLocaleString()+' bytes in '+(r.checkout_files??'?')+' files, at the commit the census booted (.git excluded)';td.className='n'}}
+else if(c==='repo_kb'){if(r.repo_kb!=null){td.textContent=fmtMB(r.repo_kb*1024);td.title='GitHub\\'s reported repository size: '+r.repo_kb.toLocaleString()+' KB, packed and including all history — not the game size beside it';td.className='n'}}
 else if(c==='loader_mobile'){if(r.loader_mobile_url){const a=link(r.loader_mobile_url,'\u25b6 mobile');a.target='_blank';a.rel='noopener';a.title='load '+(r.mod_name||r.full_name)+' through tmt-loader in its MOBILE layout at '+r.loader_mobile_url;td.appendChild(a)}}
 else if(c==='members'&&r.copies)td.appendChild(r.copies.length?list(r.copies.length+' copies',r.copies.map(x=>{const a=link(x.u,x.n+(x.v?' ('+x.v+')':'')+(x.e?' ~edited':''));if(!x.l)return a;const f=document.createDocumentFragment();f.appendChild(a);const pl=link(x.l,' \u25b6');pl.target='_blank';pl.rel='noopener';pl.title='play '+x.n;f.appendChild(pl);return f})):document.createTextNode('0 copies'));
 else if(c==='members'&&r.family_members&&r.family_members.length>1)td.appendChild(list(r.family_members.length+' members',r.family_members.map(n=>link('https://github.com/'+n,n))));

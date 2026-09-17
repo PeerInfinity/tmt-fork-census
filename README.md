@@ -49,6 +49,7 @@ gitignored — the raw cache is third-party code).
 | 4. live | `node scripts/4-live.mjs` (`--recheck`) | `data/live.jsonl`, `cache/live/` (gitignored) |
 | 5. license | `node scripts/5-license.mjs` (`--recheck`) | `data/license.jsonl` |
 | 6. loader | `node scripts/6-loader.mjs` (`LOADER_COMMIT`, `LOADER_BASE`, `LOADER_REPO`) | `data/loader.jsonl` |
+| 7. size | `node scripts/7-size.mjs` (`--recheck`) | `data/size.jsonl` |
 | rank | `node scripts/rank.mjs` | `results/SUMMARY.md`, `results/table.json`, `docs/index.html` |
 
 The detail of what each stage does — and the manifest emitter, the ranking formula and family collapse — is in

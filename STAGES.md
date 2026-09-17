@@ -168,6 +168,24 @@ for every ranked row the loader hosts, including rows that also have a live page
 and the page's about block. A hosted repo that is not a ranked row (a family member or a calibration copy) is named in
 the funnel.
 
+### 7. Size
+Two different numbers, because they answer different questions and diverge badly:
+
+- **`checkout_bytes` / `checkout_files`** — the working tree at the commit the census booted, `.git` excluded,
+  measured from `clones/<owner>__<repo>`. This is *the game*: what a copy costs to host, and what a
+  `git subtree add` puts in a loader. It is the number to judge "is this small enough" by.
+- **`repo_kb`** — what GitHub reports for the repository (stage 1's `size` field): packed, and **including all
+  history**. That is what cloning the fork costs.
+
+Over the ranked rows the two diverge by a **median of 3×, a maximum of 34×, and in both directions**. A repo with
+a heavy history reads far larger than its game — `Askinga/The-MJ-Tree`, 23.5 MB reported against 0.7 MB of files.
+A repo full of incompressible PNGs reads smaller — `hanlaosan1/The-Wall-Tree`, 36.5 MB reported against 70.8 MB of
+files. Neither is a usable proxy for the other, so the table carries both and the column descriptions say so.
+
+The checkout is measured from the clones stage 3 made, which are gitignored, so this stage — like stage 3 —
+produces rows only for repos cloned on the machine that runs it. It is resumable: a row whose `head` still matches
+is kept, so a re-run after a new boot batch measures only what is new. `--recheck` re-measures everything.
+
 ## Rank
 `lib/score.mjs: composite`, 0–100:
 
