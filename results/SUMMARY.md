@@ -2,8 +2,8 @@
 
 A census of the GitHub forks of The Modding Tree and Prestige Tree (both fork lists, plus one level of forks-of-forks). Forks never pushed to are dropped; every other fork's files are read at HEAD and a small lexer counts its layers, tree rows, branch edges and content (milestones, upgrades, buyables, challenges, achievements). Forks with the same layer-id set on the same engine version form one family, represented by one fork; every family with a branching tree and some content is cloned and booted headless (200 idle ticks twice for determinism, plus a simple buy/reset policy), and its engine files are diffed against the closest stock TMT commit of its version (the port cost). Families that are exact copies of a calibration tree are folded into that tree's row. Rows are ranked by a 0–100 composite: branchiness 40, content 30, completeness 30, halved when the boot fails. The data are GitHub metadata and counts, not game code.
 
-Generated 2026-09-17 by `scripts/rank.mjs` from `data/*.jsonl` at commit `3da303c` (with uncommitted data changes) of [PeerInfinity/tmt-fork-census](https://github.com/PeerInfinity/tmt-fork-census). The `loader` and `mobile` columns read [tmt-loader](https://github.com/PeerInfinity/tmt-loader)'s manifests at commit `e63f628` (stage 6) and link https://peerinfinity.github.io/tmt-loader/ — the second with `&mobile=1`, the loader's mobile layout. Every number below is read from those rows.
-🔧 = calibration row (local clone, not a fork). Score = branchiness 40 + content 30 + completeness 30 (formula: README, `lib/score.mjs`).
+Generated 2026-09-17 by `scripts/rank.mjs` from `data/*.jsonl` at commit `7466287` of [PeerInfinity/tmt-fork-census](https://github.com/PeerInfinity/tmt-fork-census). The `loader` and `mobile` columns read [tmt-loader](https://github.com/PeerInfinity/tmt-loader)'s manifests at commit `e63f628` (stage 6) and link https://peerinfinity.github.io/tmt-loader/ — the second with `&mobile=1`, the loader's mobile layout. Every number below is read from those rows.
+🔧 = calibration row (local clone, not a fork). Score = branchiness 40 + content 30 + completeness 30 (formula: STAGES.md "Rank", `lib/score.mjs`).
 
 ## Funnel
 
@@ -240,7 +240,7 @@ Trivial reasons as recorded by stage 2 (a row may have several; "demo unchanged"
 
 ## Calibration rows and their copies
 
-A copy has the calibration tree's layer-id set and content counts (README, "Family collapse"); its whole family is listed here and left out of the ranking. ★ = the family's representative (booted); `~edited member` = a family member whose own static counts or layer ids differ from the calibration tree's.
+A copy has the calibration tree's layer-id set and content counts (STAGES.md, "Family collapse"); its whole family is listed here and left out of the ranking. ★ = the family's representative (booted); `~edited member` = a family member whose own static counts or layer ids differ from the calibration tree's.
 
 ### PTR (Prestige Tree Rewritten 1.3) — 16 copies
 

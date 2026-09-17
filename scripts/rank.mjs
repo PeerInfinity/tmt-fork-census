@@ -110,7 +110,7 @@ for (const cal of CALIBRATION) {
 const ptrRoster = JSON.stringify(boot.get('calibration:Prestige-Tree')?.boot?.census?.rowRoster || null);
 for (const r of rows) r.same_tree_as_ptr = !r.calibration && ptrRoster !== 'null' && JSON.stringify(boot.get(r.full_name)?.boot?.census?.rowRoster || null) === ptrRoster;
 
-// ---- family collapse (README "Family collapse") ---------------------------------------------------
+// ---- family collapse (STAGES.md "Family collapse") ---------------------------------------------------
 // (a) COPY of a calibration tree: the representative's static layer-id set equals the calibration row's AND its static
 //     milestone/upgrade/buyable/challenge/achievement counts are equal, AND — where both booted with a census — the live
 //     game-layer count and counts are equal too. The whole family moves into the calibration row's `copies`.
@@ -200,7 +200,7 @@ const md = `# TMT fork census — results
 ${METHOD}
 
 ${provenance} Every number below is read from those rows.
-🔧 = calibration row (local clone, not a fork). Score = branchiness 40 + content 30 + completeness 30 (formula: README, \`lib/score.mjs\`).
+🔧 = calibration row (local clone, not a fork). Score = branchiness 40 + content 30 + completeness 30 (formula: STAGES.md "Rank", \`lib/score.mjs\`).
 
 ## Funnel
 
@@ -239,7 +239,7 @@ ${rows.filter((r) => r.boot_ok == null).map(line).join('\n')}
 ` : ''}
 ## Calibration rows and their copies
 
-A copy has the calibration tree's layer-id set and content counts (README, "Family collapse"); its whole family is listed here and left out of the ranking. ★ = the family's representative (booted); \`~edited member\` = a family member whose own static counts or layer ids differ from the calibration tree's.
+A copy has the calibration tree's layer-id set and content counts (STAGES.md, "Family collapse"); its whole family is listed here and left out of the ranking. ★ = the family's representative (booted); \`~edited member\` = a family member whose own static counts or layer ids differ from the calibration tree's.
 
 ${cals.map((c) => `### ${esc(c.short)} (${esc(c.mod_name)} ${esc(c.version_num)}) — ${c.copies.length} ${c.copies.length === 1 ? 'copy' : 'copies'}
 
@@ -262,7 +262,7 @@ fs.writeFileSync(p('results/SUMMARY.md'), md);
 // ---- docs/index.html (static, no CDN, data inline, relative links only) --------------------------
 // ---- column definitions ---------------------------------------------------------------------------
 // The ONE source for the column list: the page's header tooltips and legend, the Columns panel's labels
-// and the "Columns" table in README.md are all generated from it. {key, label, desc, note} — desc says what
+// and the columns table in COLUMNS.md are all generated from it. {key, label, desc, note} — desc says what
 // the number is and where it comes from; note is the unit or format.
 const COLDEFS = [
   { key: 'rank', label: 'Rank', desc: 'Position in this table, highest composite score first.', note: '1–N over the ranked rows; calibration clones are ranked alongside the forks' },
@@ -272,7 +272,7 @@ const COLDEFS = [
   { key: 'loader_mobile', label: 'Mobile', desc: 'The same loader URL with ?mobile=1 — the loader\'s mobile layout: one column, the tree until you open a layer and then the layer full width, a bottom nav bar and 44px tap targets. The engines themselves ship no @media query at all. Present only when the pinned loader commit carries the mode (stage 6).', note: '▶ mobile = a URL; empty = not hosted, or the pinned loader predates the mode' },
   { key: 'mod_name', label: 'Game name', desc: 'The game\'s own title, read from modInfo.name in js/mod.js.', note: 'text, exactly as the fork wrote it' },
   { key: 'version_num', label: 'Version', desc: 'The game\'s own version string, from modInfo.versionNumber.', note: 'text; the stock demo\'s "0.0" earns no completeness point' },
-  { key: 'base', label: 'Base game', desc: 'The calibration tree this game is built on: its layer-id set contains that tree\'s, so it is that game plus added or changed content (README, Family collapse (c)).', note: 'PTR, TMT or upgrade-land-tmt; empty when it is not built on one' },
+  { key: 'base', label: 'Base game', desc: 'The calibration tree this game is built on: its layer-id set contains that tree\'s, so it is that game plus added or changed content (STAGES.md, Family collapse (c)).', note: 'PTR, TMT or upgrade-land-tmt; empty when it is not built on one' },
   { key: 'tmtNum', label: 'Engine version', desc: 'The Modding Tree engine the fork runs, from tmtNum in js/game.js — or, when the engine was moved off the stock paths, from the engine located by content.', note: 'e.g. 2.6.6.2; empty when nothing declares it' },
   { key: 'score', label: 'Score', desc: 'The composite ranking, branchiness 40 + content 30 + completeness 30, halved when the boot failed (lib/score.mjs: composite).', note: '0–100, two decimals' },
   { key: 's_branch', label: 'Branchiness', desc: 'The branchiness part of the score: 40 × min(1, (fork nodes + join nodes) / 30), × 0.25 when the tree is linear.', note: '0–40; the /30 is PTR\'s 30 nodes' },
@@ -293,7 +293,7 @@ const COLDEFS = [
   { key: 'pushed_at', label: 'Last push', desc: 'When the repository was last pushed to, from the GitHub API.', note: 'YYYY-MM-DD; drives the recency half of completeness' },
   { key: 'archived', label: 'Archived', desc: 'Whether GitHub marks the repository archived — shown, never scored, since a finished game and an abandoned one both get archived.', note: 'true / false' },
   { key: 'stars', label: 'Stars', desc: 'The repository\'s stargazer count from the GitHub API.', note: 'integer; used only to break ties when picking a family\'s representative' },
-  { key: 'members', label: 'Members / copies', desc: 'For a fork row, how many repos share this game (the same layer-id set on the same engine version); for a calibration row, how many forks are exact copies of it and have left the ranking (README, Family collapse).', note: 'count; the cell expands to the list' },
+  { key: 'members', label: 'Members / copies', desc: 'For a fork row, how many repos share this game (the same layer-id set on the same engine version); for a calibration row, how many forks are exact copies of it and have left the ranking (STAGES.md, Family collapse).', note: 'count; the cell expands to the list' },
   { key: 'boot_ok', label: 'Boots', desc: 'Whether the game loaded and ran 200 headless ticks in its own engine (stage 3).', note: 'true / false; empty when the family was not booted, and a false halves the score' },
   { key: 'deterministic', label: 'Deterministic', desc: 'Whether the two idle boot legs ended on the same state hash after the same number of ticks.', note: 'true / false; a false row lists the differing player paths in SUMMARY.md' },
   { key: 'policy_ok', label: 'Policy leg', desc: 'Whether the second boot leg survived a generic play policy (each tick: reset any row-0 layer that can reset, buy every affordable unlocked upgrade).', note: 'true / false; recorded, never scored' },
@@ -314,16 +314,18 @@ const slim = rows.map((r) => ({ ...Object.fromEntries(cols.map((c) => [c, c === 
   family_members: r.calibration ? null : r.family_members, copies: r.calibration ? r.copies.map((x) => ({ n: x.full_name, u: x.url, v: x.tmtNum, e: x.edited, r: x.representative, l: x.live_ok ? x.live_url : null })) : null }));
 const hesc = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-// README's column table comes from the same definitions — the block between the markers is rewritten here.
-const README_START = '<!-- columns:start (generated by scripts/rank.mjs from COLDEFS — do not edit by hand) -->';
-const README_END = '<!-- columns:end -->';
-const colsMd = [README_START, '', '| column | what it is | format |', '|---|---|---|',
-  ...COLDEFS.map((d) => `| \`${d.key}\` (${esc(d.label)}) | ${esc(d.desc)} | ${esc(d.note)} |`), '', README_END].join('\n');
+// COLUMNS.md's table comes from the same definitions — the block between the markers is rewritten here. (It lived
+// in README.md until the README was split; the markers are unchanged, only the file they are looked for in.)
+const COLS_DOC = 'COLUMNS.md';
+const COLS_START = '<!-- columns:start (generated by scripts/rank.mjs from COLDEFS — do not edit by hand) -->';
+const COLS_END = '<!-- columns:end -->';
+const colsMd = [COLS_START, '', '| column | what it is | format |', '|---|---|---|',
+  ...COLDEFS.map((d) => `| \`${d.key}\` (${esc(d.label)}) | ${esc(d.desc)} | ${esc(d.note)} |`), '', COLS_END].join('\n');
 {
-  const f = p('README.md'); const txt = fs.readFileSync(f, 'utf8');
-  const a = txt.indexOf(README_START), b = txt.indexOf(README_END);
-  if (a < 0 || b < 0) console.error('README.md: no columns block (markers missing) — column table NOT updated');
-  else { const next = txt.slice(0, a) + colsMd + txt.slice(b + README_END.length); if (next !== txt) fs.writeFileSync(f, next); }
+  const f = p(COLS_DOC); const txt = fs.readFileSync(f, 'utf8');
+  const a = txt.indexOf(COLS_START), b = txt.indexOf(COLS_END);
+  if (a < 0 || b < 0) console.error(`${COLS_DOC}: no columns block (markers missing) — column table NOT updated`);
+  else { const next = txt.slice(0, a) + colsMd + txt.slice(b + COLS_END.length); if (next !== txt) fs.writeFileSync(f, next); }
 }
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
