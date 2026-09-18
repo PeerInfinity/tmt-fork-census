@@ -87,7 +87,12 @@ for (const m of html.matchAll(/<link\b([^>]*)>/gi)) {
 
 const b = boot.boot || {};
 const renderOnly = (b.files_skipped || []).filter((s) => s.why === 'render-only').map((s) => s.file);
-const modFiles = b.modFiles ?? (b.modFiles_without_loader || null);
+// HOLES ARE NOT FILES. The engine loads these with `for (file in modInfo.modFiles)`, which enumerates own keys, so
+// a hole in a sparse array is never requested. JSON cannot carry a hole, so a boot row renders one as `null` — and
+// a loader that trusts the list then derives a path `<prefix>null` that exists nowhere, which reads as drift.
+// Measured on `1-clicker`, whose mod.js writes `modFiles: [… "reb.js", ,"apoth.js" …]` with a double comma.
+const dropHoles = (a) => (Array.isArray(a) ? a.filter((f) => f != null) : a);
+const modFiles = dropHoles(b.modFiles ?? (b.modFiles_without_loader || null));
 // The loader's own prefix where loader.js declared one, else the prefix the boot actually resolved the files with.
 const prefixFromLoad = () => {
   const f0 = (modFiles || [])[0]; if (!f0) return null;
