@@ -22,7 +22,7 @@ import { execFileSync } from 'node:child_process';
 import { p, readJsonl, latestBy } from '../lib/util.mjs';
 import { CALIBRATION, CC_DIR } from '../lib/calibration.mjs';
 
-export const LOADER_COMMIT = process.env.LOADER_COMMIT || 'f9a38ef3af3f412349958a0374b1478d477e5d5b';
+export const LOADER_COMMIT = process.env.LOADER_COMMIT || '9e049a79c0728e714b9efb7d305846bd00f4bd70';
 export const LOADER_BASE = process.env.LOADER_BASE || 'https://peerinfinity.github.io/tmt-loader/';
 const LOADER_REPO = process.env.LOADER_REPO || path.join(CC_DIR, 'tmt-loader');
 const OUT = p('data/loader.jsonl');
