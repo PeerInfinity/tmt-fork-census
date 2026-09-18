@@ -11,6 +11,14 @@ baseline and deviation, the local script list in `index.html` order (render-only
 `modInfo.modFiles` with the loader's own path prefix, every external URL classified `vendor` (Vue, number and
 notation libraries) or `drop` (fonts, analytics), the save key and the rule that produces it (`modInfo.id`, or
 2.5+'s `getModID`), the headless facts (prestubs, render stubs, the idle state hash after 200 ticks,
+
+`load.external` and `load.modFilesPrefix` describe **what a loader has to decide**, so they are read the way a
+loader reads the page rather than the way a string search sees it: HTML comments are stripped first, `type=module`
+scripts are skipped, and only `<link rel=…stylesheet…>` counts. A loader never re-creates an `icon`, `preconnect`
+or `manifest` link, so a verdict for one is drift nothing can satisfy; absolute ASSET urls anywhere in the tree
+are a different thing, and the loader has `load.known.externalHosts` for them. `modFilesPrefix` is whatever
+`loader.js` DECLARES, even when `modInfo.modFiles` is empty, because the declaration is what a loader reads.
+
 deterministic) and the per-file license verdict. Every value is read back out of `data/*.jsonl`,
 `results/table.json` and the clone — nothing is recomputed and nothing is invented; a field the rows do not
 carry is written `null`. The manifest is therefore a **pin of what the census observed** at the recorded
