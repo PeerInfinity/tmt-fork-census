@@ -56,19 +56,32 @@ catch { try { commit = JSON.parse(execFileSync('gh', ['api', `repos/${repo}/comm
 
 // ---- index.html: script order and external resources ----------------------------------------------
 // Same regex lib/boot.mjs boots with, so the order pinned here is the order the census loaded.
-const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const htmlRaw = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+// COMMENTS FIRST. A loader parses the page the way a browser would, so a tag inside <!-- --> is not a load — and
+// `load.external` is a list of decisions a loader has to make, not of strings that occur in the file. Measured:
+// medsal15/The-Gaming-Tree has its Google-Fonts <link> commented out and a local font css beside it, and this
+// emitter pinned a `drop` verdict for a URL the page never requests.
+const html = htmlRaw.replace(/<!--[\s\S]*?-->/g, '');
 const rel = (src) => path.posix.normalize(src.replace(/^\.?\//, '').replace(/[?#].*$/, ''));
 const scripts = [], external = {};
 let inline = 0;
 for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
   const attrs = m[1], src = (attrs.match(/\bsrc\s*=\s*["']([^"']+)["']/i) || [])[1];
+  if (/type\s*=\s*["']module["']/i.test(attrs)) continue; // a loader skips these; so does lib/boot.mjs
   if (src) {
     if (/^(https?:)?\/\//i.test(src)) external[src] = VENDOR(src) ? 'vendor' : 'drop';
     else scripts.push(rel(src));
   } else if (m[2].trim()) scripts.push(`inline#${++inline}`);
 }
-for (const m of html.matchAll(/<link\b[^>]*>/gi)) {
-  const href = (m[0].match(/\bhref\s*=\s*["']([^"']+)["']/i) || [])[1];
+// ONLY STYLESHEETS. A loader re-creates `<link rel=stylesheet>`; every other <link> — `icon`, `preconnect`,
+// `manifest` — it does not re-create at all, so there is no verdict for it to honour and an entry here is drift
+// it can never satisfy. Absolute ASSET urls anywhere in the tree are a different thing and have their own place:
+// the loader's `load.known.externalHosts`. Measured: Askinga/The-MJ-Tree pins a favicon on ngfiles.com,
+// denisolenison/The-Leveling-Tree two bare `preconnect` hosts.
+for (const m of html.matchAll(/<link\b([^>]*)>/gi)) {
+  const attrs = m[1];
+  if (!/\brel\s*=\s*["'][^"']*\bstylesheet\b/i.test(attrs)) continue;
+  const href = (attrs.match(/\bhref\s*=\s*["']([^"']+)["']/i) || [])[1];
   if (href && /^(https?:)?\/\//i.test(href)) external[href] = VENDOR(href) ? 'vendor' : 'drop';
 }
 
@@ -81,7 +94,22 @@ const prefixFromLoad = () => {
   const hit = (b.files_loaded || []).find((f) => f === f0 || f.endsWith('/' + f0));
   return hit ? hit.slice(0, hit.length - f0.length) || null : null;
 };
-const modFilesPrefix = modFiles && modFiles.length ? (b.modFiles_prefix ?? prefixFromLoad()) : null;
+// The prefix is a property of what loader.js DECLARES, not of whether the mod happens to list any files. A game
+// with an empty `modInfo.modFiles` still has the declaration, and a loader reads it off the source — so gating
+// this on `modFiles.length` pinned `null` against a live `js/`, drift nothing could resolve. Measured on
+// c0v1d-9119361/The-Plague-Tree and shenmi124/The-Game-Tree.
+// The declaration is read with the SAME rule as the loader's `loaderPrefixOf` (tmt-loader loader/interpret.mjs):
+// the string literal in `"<prefix>" + modInfo.modFiles[`. Keep the two in step.
+const loaderPrefixFromSource = () => {
+  const entry = (b.files_loaded || []).find((f) => /(^|\/)loader\.js$/i.test(f))
+    || (scripts.find((f) => /(^|\/)loader\.js$/i.test(f)));
+  if (!entry) return null;
+  const f = path.join(root, entry);
+  if (!fs.existsSync(f)) return null;
+  const m = fs.readFileSync(f, 'utf8').match(/["'`]([^"'`]*)["'`]\s*\+\s*modInfo\.modFiles\s*\[/);
+  return m ? m[1] || null : null;
+};
+const modFilesPrefix = (modFiles && modFiles.length ? (b.modFiles_prefix ?? prefixFromLoad()) : null) ?? loaderPrefixFromSource();
 
 // ---- modInfo (lib/scan.mjs, not a second regex) ---------------------------------------------------
 const modPath = boot.engine_located?.mod
