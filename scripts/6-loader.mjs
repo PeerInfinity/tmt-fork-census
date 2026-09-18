@@ -22,7 +22,7 @@ import { execFileSync } from 'node:child_process';
 import { p, readJsonl, latestBy } from '../lib/util.mjs';
 import { CALIBRATION, CC_DIR } from '../lib/calibration.mjs';
 
-export const LOADER_COMMIT = process.env.LOADER_COMMIT || '9849b914f6acb40700bbd8a45ea3270e6da87aa5';
+export const LOADER_COMMIT = process.env.LOADER_COMMIT || '9adfda45323a686b14f1ed86a9754a959998a30a';
 export const LOADER_BASE = process.env.LOADER_BASE || 'https://peerinfinity.github.io/tmt-loader/';
 const LOADER_REPO = process.env.LOADER_REPO || path.join(CC_DIR, 'tmt-loader');
 const OUT = p('data/loader.jsonl');
@@ -68,7 +68,7 @@ for (const d of declined) {
   const full_name = d.repo ? census.get(d.repo.toLowerCase()) : null;
   if (!full_name) { unjoined.push({ declined: d.repo || null }); continue; }
   rows.push({ full_name, loader_id: null, loader_url: null, loader_mobile_url: null, loader_commit: commit,
-    upstream_commit: null, license_verdict: null, declined_reason: d.reason || null });
+    upstream_commit: null, license_verdict: null, declined_short: d.short || null, declined_reason: d.reason || null });
 }
 const dup = rows.map((r) => r.full_name).filter((n, i, a) => a.indexOf(n) !== i);
 if (dup.length) throw new Error('two manifests join one census row: ' + [...new Set(dup)].join(', '));

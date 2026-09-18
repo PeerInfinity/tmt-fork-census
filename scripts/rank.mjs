@@ -30,7 +30,7 @@ const licOf = (name) => { const l = lic.get(name); return { license: l ? l.licen
 // Stage 6 — the game hosted by tmt-loader at a pinned loader commit (scripts/6-loader.mjs). Missing = not hosted.
 const loaderRows = readJsonl(p('data/loader.jsonl'));
 const loader = latestBy(loaderRows);
-const loaderOf = (name) => { const l = loader.get(name); return { loader_url: l ? l.loader_url : null, loader_mobile_url: l ? l.loader_mobile_url || null : null, loader_id: l ? l.loader_id : null, loader_commit: l ? l.loader_commit : null, declined_reason: l ? l.declined_reason || null : null }; };
+const loaderOf = (name) => { const l = loader.get(name); return { loader_url: l ? l.loader_url : null, loader_mobile_url: l ? l.loader_mobile_url || null : null, loader_id: l ? l.loader_id : null, loader_commit: l ? l.loader_commit : null, declined_short: l ? l.declined_short || null : null, declined_reason: l ? l.declined_reason || null : null }; };
 // Stage 7 — how big the game is (scripts/7-size.mjs). Two different numbers; see that file.
 const sizeRows = readJsonl(p('data/size.jsonl'));
 const sizes = latestBy(sizeRows);
@@ -44,10 +44,19 @@ const sizeOf = (name) => { const z = sizes.get(name); return { checkout_bytes: z
  */
 const notHosted = (r) => {
   if (r.loader_url) return '';
+  if (r.declined_short || r.declined_reason) return r.declined_short || r.declined_reason;
+  if (r.calibration) return 'calibration clone';
+  if (r.boot_ok === false) return `no boot: ${r.boot_failed_at || 'unknown'}`;
+  if (r.checkout_bytes == null) return 'not cloned';
+  return '';
+};
+/** The full account behind the short cell, for the tooltip: the loader's own words where it has them. */
+const notHostedWhy = (r) => {
+  if (r.loader_url) return '';
   if (r.declined_reason) return r.declined_reason;
-  if (r.calibration) return 'calibration clone, not a fork of its own';
-  if (r.boot_ok === false) return `did not boot in this census (${r.boot_failed_at || 'unknown stage'})`;
-  if (r.checkout_bytes == null) return 'not cloned here, so never measured or attempted';
+  if (r.calibration) return 'a local calibration clone, not a fork of its own';
+  if (r.boot_ok === false) return `did not boot in this census, at ${r.boot_failed_at || 'an unknown stage'}`;
+  if (r.checkout_bytes == null) return 'not cloned on the machine that ran the census, so never measured or attempted';
   return '';
 };
 const LOADER_COMMITS = [...new Set(loaderRows.map((r) => r.loader_commit))];
@@ -212,8 +221,8 @@ const mobileCell = (r) => r.loader_mobile_url ? `[▶ mobile](${r.loader_mobile_
 const mb = (b) => b == null ? '' : b >= 1e8 ? `${Math.round(b / 1e6)}` : b >= 1e5 ? `${(b / 1e6).toFixed(1)}` : `${(b / 1e6).toFixed(2)}`;
 const sizeCell = (r) => mb(r.checkout_bytes);
 const repoSizeCell = (r) => r.repo_kb == null ? '' : mb(r.repo_kb * 1024);
-const line = (r) => `| ${r.rank} | ${r.calibration ? '🔧 ' : ''}${r.url ? `[${esc(r.full_name)}](${r.url})` : esc(r.full_name)} | ${playCell(r)} | ${loaderCell(r)} | ${mobileCell(r)} | ${sizeCell(r)} | ${repoSizeCell(r)} | ${esc(notHosted(r))} | ${esc(r.license || 'none')} | ${esc(r.mod_name)} ${esc(r.version_num)}${r.base ? ` (base: ${r.base})` : ''}${r.same_tree_as_ptr && !r.base ? ' (= PTR tree)' : ''} | ${esc(r.tmtNum || r.engine)} | ${r.score} | ${r.layers}/${r.rows} | ${(r.widthPerRow || []).join(',')} | ${r.branchEdges} | ${r.forkNodes}/${r.joinNodes} | ${r.milestones}/${r.upgrades}/${r.buyables}/${r.challenges}/${r.achievements} | ${r.content} | ${r.endgame && !/e280000000/.test(r.endgame) ? 'yes' : 'no'} | ${(r.pushed_at || '').slice(0, 10)} | ${membersCell(r)} | ${bootCell(r)} | ${dev(r)} |`;
-const HDR = '| # | repo | play | loader | mobile | size MB | repo MB | why not hosted | license | game / version | engine | score | layers/rows | width per row | edges | fork/join | ms/upg/buy/ch/ach | content | endgame | last push | members | boot | engine deviation vs stock |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
+const line = (r) => `| ${r.rank} | ${r.calibration ? '🔧 ' : ''}${r.url ? `[${esc(r.full_name)}](${r.url})` : esc(r.full_name)} | ${playCell(r)} | ${loaderCell(r)} | ${mobileCell(r)} | ${esc(r.license || 'none')} | ${esc(r.mod_name)} ${esc(r.version_num)}${r.base ? ` (base: ${r.base})` : ''}${r.same_tree_as_ptr && !r.base ? ' (= PTR tree)' : ''} | ${esc(r.tmtNum || r.engine)} | ${r.score} | ${r.layers}/${r.rows} | ${(r.widthPerRow || []).join(',')} | ${r.branchEdges} | ${r.forkNodes}/${r.joinNodes} | ${r.milestones}/${r.upgrades}/${r.buyables}/${r.challenges}/${r.achievements} | ${r.content} | ${r.endgame && !/e280000000/.test(r.endgame) ? 'yes' : 'no'} | ${(r.pushed_at || '').slice(0, 10)} | ${membersCell(r)} | ${bootCell(r)} | ${dev(r)} | ${sizeCell(r)} | ${repoSizeCell(r)} | ${esc(notHosted(r))} |`;
+const HDR = '| # | repo | play | loader | mobile | license | game / version | engine | score | layers/rows | width per row | edges | fork/join | ms/upg/buy/ch/ach | content | endgame | last push | members | boot | engine deviation vs stock | size MB | repo MB | why not hosted |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
 const booted = rows.filter((r) => r.boot_ok != null);
 const LOADER_REPO_URL = 'https://github.com/PeerInfinity/tmt-loader';
 const provenance = `Generated ${GEN_DATE} by \`scripts/rank.mjs\` from \`data/*.jsonl\` at commit \`${DATA_COMMIT}\`${DATA_DIRTY ? ' (with uncommitted data changes)' : ''} of [${REPO_URL.replace('https://github.com/', '')}](${REPO_URL}).${LOADER_COMMIT ? ` The \`loader\` and \`mobile\` columns read [tmt-loader](${LOADER_REPO_URL})'s manifests at commit \`${LOADER_COMMIT.slice(0, 7)}\` (stage 6) and link ${LOADER_BASE} — the second with \`&mobile=1\`, the loader's mobile layout.` : ''}`;
@@ -294,9 +303,6 @@ const COLDEFS = [
   { key: 'play', label: 'Play', desc: 'The row\'s live game page, derived from the repo\'s homepage or its GitHub Pages URL and verified with one GET (stage 4).', note: '▶ play = answered 2xx/3xx; a greyed ▶ dead names the status in its tooltip; empty = no URL could be derived' },
   { key: 'loader', label: 'Loader', desc: 'The same game loaded through tmt-loader on its own engine (no CDN, namespaced save; automation only with ?automation=1) — for every ranked row the loader hosts at the pinned commit (stage 6).', note: '▶ loader = a URL; empty = not hosted' },
   { key: 'loader_mobile', label: 'Mobile', desc: 'The same loader URL with ?mobile=1 — the loader\'s mobile layout: one column, the tree until you open a layer and then the layer full width, a bottom nav bar and 44px tap targets. The engines themselves ship no @media query at all. Present only when the pinned loader commit carries the mode (stage 6).', note: '▶ mobile = a URL; empty = not hosted, or the pinned loader predates the mode' },
-  { key: 'checkout_bytes', label: 'Game size', desc: 'How big the game itself is: the bytes of the working tree at the commit the census booted, .git excluded (stage 7). This is what a copy of it costs to host — what `git subtree add` puts in a loader — and it is the number to judge "is this small enough" by.', note: 'MB; empty when the repo was not cloned on the machine that ran the stage' },
-  { key: 'repo_kb', label: 'Repository size', desc: 'What GitHub reports for the repository: packed, and INCLUDING ALL HISTORY (stage 1\'s size field). It is what cloning the fork costs, and it is NOT a proxy for the game size beside it — over these rows the two diverge by a median of 3x and a maximum of 34x, in both directions (a heavy history reads far larger than its game; a pile of incompressible PNGs reads smaller).', note: 'MB, converted from the API\'s KB' },
-  { key: 'not_hosted', label: 'Why not hosted', desc: 'For a ranked game the loader does not host: why. The loader publishes its own list of what it looked at and declined (manifests/declined.json, read at the pinned commit by stage 6) and that reason wins, because it made the attempt and saw the evidence. Where it has none, the census says only what it measured itself — a boot that failed here, or a repo it never cloned. Empty for a hosted game.', note: 'text; empty when the game IS hosted, and also when nothing here has anything to say about it' },
   { key: 'mod_name', label: 'Game name', desc: 'The game\'s own title, read from modInfo.name in js/mod.js.', note: 'text, exactly as the fork wrote it' },
   { key: 'version_num', label: 'Version', desc: 'The game\'s own version string, from modInfo.versionNumber.', note: 'text; the stock demo\'s "0.0" earns no completeness point' },
   { key: 'base', label: 'Base game', desc: 'The calibration tree this game is built on: its layer-id set contains that tree\'s, so it is that game plus added or changed content (STAGES.md, Family collapse (c)).', note: 'PTR or TMT; empty when it is not built on one' },
@@ -333,11 +339,14 @@ const COLDEFS = [
   { key: 'engine_moved', label: 'Engine moved', desc: 'Whether the fork moved its engine files off the stock paths, so they had to be located by content before diffing.', note: 'true / false' },
   { key: 'same_tree_as_ptr', label: 'Same tree as PTR', desc: 'Whether the booted game\'s live row roster is exactly Prestige Tree Rewritten\'s — flagged so a near-copy is not read as a new game.', note: 'true / false' },
   { key: 'license', label: 'License', desc: "The license GitHub detected on the repository at census time — its license.spdx_id, quoted as reported and not a legal determination; \"none\" means GitHub detected no LICENSE file, which does not free the code, since a fork of an MIT project without the file is still bound by the upstream terms.", note: 'SPDX id, e.g. MIT; NOASSERTION = a license file licensee could not match (the TMT lineage\'s MIT text carries a non-standard copyright line, so nearly every row reads this); calibration rows are read from their clone\'s own files' },
+  { key: 'checkout_bytes', label: 'Game size', desc: 'How big the game itself is: the bytes of the working tree at the commit the census booted, .git excluded (stage 7). This is what a copy of it costs to host — what `git subtree add` puts in a loader — and it is the number to judge "is this small enough" by.', note: 'MB; empty when the repo was not cloned on the machine that ran the stage' },
+  { key: 'repo_kb', label: 'Repository size', desc: 'What GitHub reports for the repository: packed, and INCLUDING ALL HISTORY (stage 1\'s size field). It is what cloning the fork costs, and it is NOT a proxy for the game size beside it — over these rows the two diverge by a median of 3x and a maximum of 34x, in both directions (a heavy history reads far larger than its game; a pile of incompressible PNGs reads smaller).', note: 'MB, converted from the API\'s KB' },
+  { key: 'not_hosted', label: 'Why not hosted', desc: 'For a ranked game the loader does not host: why. The loader publishes its own list of what it looked at and declined (manifests/declined.json, read at the pinned commit by stage 6) and that reason wins, because it made the attempt and saw the evidence. Where it has none, the census says only what it measured itself — a boot that failed here, or a repo it never cloned. Empty for a hosted game.', note: 'text; empty when the game IS hosted, and also when nothing here has anything to say about it' },
 ];
 const cols = COLDEFS.map((d) => d.key);
 const slim = rows.map((r) => ({ ...Object.fromEntries(cols.map((c) => [c, c === 'widthPerRow' ? (r[c] || []).join(',') : c === 'pushed_at' ? (r[c] || '').slice(0, 10) : c === 'play' ? (r.live_ok ? 'live' : r.live_url ? 'dead' : null) : c === 'loader' ? (r.loader_url ? 'hosted' : null) : c === 'loader_mobile' ? (r.loader_mobile_url ? 'hosted' : null) : c === 'not_hosted' ? (notHosted(r) || null) : r[c] ?? null])),
   checkout_files: r.checkout_files ?? null,
-  url: r.url, calibration: r.calibration, live_url: r.live_url || null, live_ok: !!r.live_ok, live_status: r.live_status ?? null, loader_url: r.loader_url || null, loader_mobile_url: r.loader_mobile_url || null,
+  url: r.url, calibration: r.calibration, live_url: r.live_url || null, live_ok: !!r.live_ok, live_status: r.live_status ?? null, loader_url: r.loader_url || null, loader_mobile_url: r.loader_mobile_url || null, not_hosted_why: notHostedWhy(r) || null,
   lic_n: r.license_name || null, lic_s: r.license_source || null, lic_note: r.license_note || null,
   family_members: r.calibration ? null : r.family_members, copies: r.calibration ? r.copies.map((x) => ({ n: x.full_name, u: x.url, v: x.tmtNum, e: x.edited, r: x.representative, l: x.live_ok ? x.live_url : null })) : null }));
 const hesc = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -477,6 +486,7 @@ else if(r.live_url){const s=document.createElement('span');s.className='dead';s.
 else if(c==='loader'){if(r.loader_url){const a=link(r.loader_url,'\u25b6 loader');a.target='_blank';a.rel='noopener';a.title='load '+(r.mod_name||r.full_name)+' through tmt-loader at '+r.loader_url;td.appendChild(a)}}
 else if(c==='checkout_bytes'){if(r.checkout_bytes!=null){td.textContent=fmtMB(r.checkout_bytes);td.title=r.checkout_bytes.toLocaleString()+' bytes in '+(r.checkout_files??'?')+' files, at the commit the census booted (.git excluded)';td.className='n'}}
 else if(c==='repo_kb'){if(r.repo_kb!=null){td.textContent=fmtMB(r.repo_kb*1024);td.title='GitHub\\'s reported repository size: '+r.repo_kb.toLocaleString()+' KB, packed and including all history — not the game size beside it';td.className='n'}}
+else if(c==='not_hosted'){if(r.not_hosted){td.textContent=r.not_hosted;if(r.not_hosted_why)td.title=r.not_hosted_why}}
 else if(c==='loader_mobile'){if(r.loader_mobile_url){const a=link(r.loader_mobile_url,'\u25b6 mobile');a.target='_blank';a.rel='noopener';a.title='load '+(r.mod_name||r.full_name)+' through tmt-loader in its MOBILE layout at '+r.loader_mobile_url;td.appendChild(a)}}
 else if(c==='members'&&r.copies)td.appendChild(r.copies.length?list(r.copies.length+' copies',r.copies.map(x=>{const a=link(x.u,x.n+(x.v?' ('+x.v+')':'')+(x.e?' ~edited':''));if(!x.l)return a;const f=document.createDocumentFragment();f.appendChild(a);const pl=link(x.l,' \u25b6');pl.target='_blank';pl.rel='noopener';pl.title='play '+x.n;f.appendChild(pl);return f})):document.createTextNode('0 copies'));
 else if(c==='members'&&r.family_members&&r.family_members.length>1)td.appendChild(list(r.family_members.length+' members',r.family_members.map(n=>link('https://github.com/'+n,n))));

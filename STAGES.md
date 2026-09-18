@@ -176,8 +176,8 @@ the duplicate check here would catch it too. A pin older than the file simply yi
 
 `rank.mjs` joins the rows on `full_name` and carries `loader_url`, `loader_mobile_url`, `loader_id` and
 `loader_commit` into `results/table.json`, a `loader` and a `mobile` column in `results/SUMMARY.md` and on the page —
-for every ranked row the loader hosts, including rows that also have a live page — plus `declined_reason`, which
-feeds the `why not hosted` column. Where the loader has no reason for an unhosted row, that column says only what
+for every ranked row the loader hosts, including rows that also have a live page — plus `declined_short` and `declined_reason`:
+the short label is what the `why not hosted` cell prints, the full reason is its tooltip. Where the loader has no reason for an unhosted row, that column says only what
 the census measured itself (a boot that failed here, a repo never cloned); it does **not** re-derive the loader's
 size policy, because a game declined for size is declined in that list with the measured number in its reason. The
 stage also names the loader commit and base in SUMMARY's provenance line
