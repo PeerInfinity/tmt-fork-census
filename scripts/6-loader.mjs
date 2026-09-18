@@ -22,7 +22,7 @@ import { execFileSync } from 'node:child_process';
 import { p, readJsonl, latestBy } from '../lib/util.mjs';
 import { CALIBRATION, CC_DIR } from '../lib/calibration.mjs';
 
-export const LOADER_COMMIT = process.env.LOADER_COMMIT || 'cbe3a7713eb335aeaeabb3987638ff92fefa8f77';
+export const LOADER_COMMIT = process.env.LOADER_COMMIT || '9849b914f6acb40700bbd8a45ea3270e6da87aa5';
 export const LOADER_BASE = process.env.LOADER_BASE || 'https://peerinfinity.github.io/tmt-loader/';
 const LOADER_REPO = process.env.LOADER_REPO || path.join(CC_DIR, 'tmt-loader');
 const OUT = p('data/loader.jsonl');
@@ -42,6 +42,16 @@ const mobileSupported = (() => {
   return quiet('loader/mobile.css') !== null && /params\.get\(['"]mobile['"]\)/.test(quiet('loader/page.js') || '');
 })();
 
+// The loader also records what it LOOKED AT and declined, and why (manifests/declined.json). That judgement
+// belongs on its side — it made the attempt and saw the evidence — and is read here at the same pinned commit as
+// everything else, so the column cannot drift from the loader that owns it. A repo cannot be both: the loader
+// gates that, and the duplicate check below would catch it here too.
+// quiet: `git show` of a path the pin does not have also prints to stderr, and a pin older than the file simply
+// has no declined rows — that is not an error here
+let declined = [];
+try { declined = JSON.parse(execFileSync('git', ['-C', LOADER_REPO, 'show', `${LOADER_COMMIT}:manifests/declined.json`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 16 * 1024 * 1024 })); }
+catch { declined = []; }
+
 const index = JSON.parse(show('manifests/index.json'));
 const rows = [], unjoined = [];
 for (const { id } of index) {
@@ -54,9 +64,15 @@ for (const { id } of index) {
   rows.push({ full_name, loader_id: id, loader_url, loader_mobile_url: mobileSupported ? loader_url + '&mobile=1' : null, loader_commit: commit,
     upstream_commit: m.upstream.commit || null, license_verdict: m.license?.verdict ?? null });
 }
+for (const d of declined) {
+  const full_name = d.repo ? census.get(d.repo.toLowerCase()) : null;
+  if (!full_name) { unjoined.push({ declined: d.repo || null }); continue; }
+  rows.push({ full_name, loader_id: null, loader_url: null, loader_mobile_url: null, loader_commit: commit,
+    upstream_commit: null, license_verdict: null, declined_reason: d.reason || null });
+}
 const dup = rows.map((r) => r.full_name).filter((n, i, a) => a.indexOf(n) !== i);
 if (dup.length) throw new Error('two manifests join one census row: ' + [...new Set(dup)].join(', '));
 rows.sort((a, b) => (a.full_name < b.full_name ? -1 : a.full_name > b.full_name ? 1 : 0));
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, rows.map((r) => JSON.stringify(r)).join('\n') + (rows.length ? '\n' : ''));
-console.log(JSON.stringify({ loader_commit: commit, loader_base: LOADER_BASE, mobile_supported: mobileSupported, manifests: index.length, joined: rows.length, unjoined }));
+console.log(JSON.stringify({ loader_commit: commit, loader_base: LOADER_BASE, mobile_supported: mobileSupported, manifests: index.length, declined: declined.length, joined: rows.length, unjoined }));

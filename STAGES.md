@@ -169,9 +169,18 @@ feature, and a loader that does not know `?mobile=1` ignores it silently, so the
 layout while the column claimed otherwise. The file is rewritten whole on every run, so two runs are
 byte-identical; a manifest that joins no census repo is printed, not written.
 
+The loader also records what it **looked at and declined**, and why (`manifests/declined.json`), read at the same
+pinned commit. That judgement belongs on its side — it made the attempt and saw the evidence — so the census joins
+it rather than forming an opinion of its own. A repo cannot be both hosted and declined: the loader gates that, and
+the duplicate check here would catch it too. A pin older than the file simply yields no declined rows.
+
 `rank.mjs` joins the rows on `full_name` and carries `loader_url`, `loader_mobile_url`, `loader_id` and
 `loader_commit` into `results/table.json`, a `loader` and a `mobile` column in `results/SUMMARY.md` and on the page —
-for every ranked row the loader hosts, including rows that also have a live page — and names the loader commit and base in SUMMARY's provenance line
+for every ranked row the loader hosts, including rows that also have a live page — plus `declined_reason`, which
+feeds the `why not hosted` column. Where the loader has no reason for an unhosted row, that column says only what
+the census measured itself (a boot that failed here, a repo never cloned); it does **not** re-derive the loader's
+size policy, because a game declined for size is declined in that list with the measured number in its reason. The
+stage also names the loader commit and base in SUMMARY's provenance line
 and the page's about block. A hosted repo that is not a ranked row (a family member or a calibration copy) is named in
 the funnel.
 

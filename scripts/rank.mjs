@@ -30,13 +30,28 @@ const licOf = (name) => { const l = lic.get(name); return { license: l ? l.licen
 // Stage 6 — the game hosted by tmt-loader at a pinned loader commit (scripts/6-loader.mjs). Missing = not hosted.
 const loaderRows = readJsonl(p('data/loader.jsonl'));
 const loader = latestBy(loaderRows);
-const loaderOf = (name) => { const l = loader.get(name); return { loader_url: l ? l.loader_url : null, loader_mobile_url: l ? l.loader_mobile_url || null : null, loader_id: l ? l.loader_id : null, loader_commit: l ? l.loader_commit : null }; };
+const loaderOf = (name) => { const l = loader.get(name); return { loader_url: l ? l.loader_url : null, loader_mobile_url: l ? l.loader_mobile_url || null : null, loader_id: l ? l.loader_id : null, loader_commit: l ? l.loader_commit : null, declined_reason: l ? l.declined_reason || null : null }; };
 // Stage 7 — how big the game is (scripts/7-size.mjs). Two different numbers; see that file.
 const sizeRows = readJsonl(p('data/size.jsonl'));
 const sizes = latestBy(sizeRows);
 const sizeOf = (name) => { const z = sizes.get(name); return { checkout_bytes: z ? z.checkout_bytes : null, checkout_files: z ? z.checkout_files : null, repo_kb: z ? z.repo_kb : null }; };
+/**
+ * Why a ranked game is not in the loader. The loader's own reason wins: it made the attempt and saw the evidence,
+ * and it publishes the list this joins (stage 6). Where it has none, the census says only what IT measured — a
+ * boot that failed here, or a repo it never cloned. It does NOT re-derive the loader's size policy: a game
+ * declined for size is declined in that list, with the measured number in its reason, so no threshold is
+ * duplicated here to go stale.
+ */
+const notHosted = (r) => {
+  if (r.loader_url) return '';
+  if (r.declined_reason) return r.declined_reason;
+  if (r.calibration) return 'calibration clone, not a fork of its own';
+  if (r.boot_ok === false) return `did not boot in this census (${r.boot_failed_at || 'unknown stage'})`;
+  if (r.checkout_bytes == null) return 'not cloned here, so never measured or attempted';
+  return '';
+};
 const LOADER_COMMITS = [...new Set(loaderRows.map((r) => r.loader_commit))];
-const LOADER_BASES = [...new Set(loaderRows.map((r) => r.loader_url.slice(0, r.loader_url.lastIndexOf('?mod='))))];
+const LOADER_BASES = [...new Set(loaderRows.filter((r) => r.loader_url).map((r) => r.loader_url.slice(0, r.loader_url.lastIndexOf('?mod='))))];  // a DECLINED row has no url
 if (LOADER_COMMITS.length > 1 || LOADER_BASES.length > 1) throw new Error('data/loader.jsonl mixes loader commits or bases: ' + [...LOADER_COMMITS, ...LOADER_BASES].join(', '));
 const LOADER_COMMIT = LOADER_COMMITS[0] || null, LOADER_BASE = LOADER_BASES[0] || null;
 const liveOf = (name) => { const l = live.get(name); return l ? { live_url: l.live_url, live_status: l.live_status, live_ok: !!l.live_ok, live_source: l.live_source, live_final: l.final_url && l.final_url !== l.live_url ? l.final_url : null } : { live_url: null, live_status: null, live_ok: false, live_source: null, live_final: null }; };
@@ -177,6 +192,7 @@ const stages = {
   live_checked: live.size, live_ok: cnt(liveRows, (r) => r.live_ok), live_dead: cnt(liveRows, (r) => !r.live_ok),
   ranked_loader: cnt(rows, (r) => r.loader_url), ranked_loader_no_live: cnt(rows, (r) => r.loader_url && !r.live_ok),
   ranked_loader_mobile: cnt(rows, (r) => r.loader_mobile_url),
+  ranked_declined: cnt(rows, (r) => r.declined_reason), ranked_not_hosted_explained: cnt(rows, (r) => !r.loader_url && notHosted(r)),
   loader_hosted: loader.size, loader_not_ranked: [...loader.keys()].filter((n) => !rows.some((r) => r.full_name === n)),
   ranked_live_ok: cnt(rows, (r) => r.live_ok), ranked_live_dead: cnt(rows, (r) => !r.live_ok && r.live_url), ranked_live_none: cnt(rows, (r) => !r.live_url),
   collapsed_families: collapsed.size, ranked_rows: rows.length,
@@ -196,8 +212,8 @@ const mobileCell = (r) => r.loader_mobile_url ? `[▶ mobile](${r.loader_mobile_
 const mb = (b) => b == null ? '' : b >= 1e8 ? `${Math.round(b / 1e6)}` : b >= 1e5 ? `${(b / 1e6).toFixed(1)}` : `${(b / 1e6).toFixed(2)}`;
 const sizeCell = (r) => mb(r.checkout_bytes);
 const repoSizeCell = (r) => r.repo_kb == null ? '' : mb(r.repo_kb * 1024);
-const line = (r) => `| ${r.rank} | ${r.calibration ? '🔧 ' : ''}${r.url ? `[${esc(r.full_name)}](${r.url})` : esc(r.full_name)} | ${playCell(r)} | ${loaderCell(r)} | ${mobileCell(r)} | ${sizeCell(r)} | ${repoSizeCell(r)} | ${esc(r.license || 'none')} | ${esc(r.mod_name)} ${esc(r.version_num)}${r.base ? ` (base: ${r.base})` : ''}${r.same_tree_as_ptr && !r.base ? ' (= PTR tree)' : ''} | ${esc(r.tmtNum || r.engine)} | ${r.score} | ${r.layers}/${r.rows} | ${(r.widthPerRow || []).join(',')} | ${r.branchEdges} | ${r.forkNodes}/${r.joinNodes} | ${r.milestones}/${r.upgrades}/${r.buyables}/${r.challenges}/${r.achievements} | ${r.content} | ${r.endgame && !/e280000000/.test(r.endgame) ? 'yes' : 'no'} | ${(r.pushed_at || '').slice(0, 10)} | ${membersCell(r)} | ${bootCell(r)} | ${dev(r)} |`;
-const HDR = '| # | repo | play | loader | mobile | size MB | repo MB | license | game / version | engine | score | layers/rows | width per row | edges | fork/join | ms/upg/buy/ch/ach | content | endgame | last push | members | boot | engine deviation vs stock |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
+const line = (r) => `| ${r.rank} | ${r.calibration ? '🔧 ' : ''}${r.url ? `[${esc(r.full_name)}](${r.url})` : esc(r.full_name)} | ${playCell(r)} | ${loaderCell(r)} | ${mobileCell(r)} | ${sizeCell(r)} | ${repoSizeCell(r)} | ${esc(notHosted(r))} | ${esc(r.license || 'none')} | ${esc(r.mod_name)} ${esc(r.version_num)}${r.base ? ` (base: ${r.base})` : ''}${r.same_tree_as_ptr && !r.base ? ' (= PTR tree)' : ''} | ${esc(r.tmtNum || r.engine)} | ${r.score} | ${r.layers}/${r.rows} | ${(r.widthPerRow || []).join(',')} | ${r.branchEdges} | ${r.forkNodes}/${r.joinNodes} | ${r.milestones}/${r.upgrades}/${r.buyables}/${r.challenges}/${r.achievements} | ${r.content} | ${r.endgame && !/e280000000/.test(r.endgame) ? 'yes' : 'no'} | ${(r.pushed_at || '').slice(0, 10)} | ${membersCell(r)} | ${bootCell(r)} | ${dev(r)} |`;
+const HDR = '| # | repo | play | loader | mobile | size MB | repo MB | why not hosted | license | game / version | engine | score | layers/rows | width per row | edges | fork/join | ms/upg/buy/ch/ach | content | endgame | last push | members | boot | engine deviation vs stock |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|';
 const booted = rows.filter((r) => r.boot_ok != null);
 const LOADER_REPO_URL = 'https://github.com/PeerInfinity/tmt-loader';
 const provenance = `Generated ${GEN_DATE} by \`scripts/rank.mjs\` from \`data/*.jsonl\` at commit \`${DATA_COMMIT}\`${DATA_DIRTY ? ' (with uncommitted data changes)' : ''} of [${REPO_URL.replace('https://github.com/', '')}](${REPO_URL}).${LOADER_COMMIT ? ` The \`loader\` and \`mobile\` columns read [tmt-loader](${LOADER_REPO_URL})'s manifests at commit \`${LOADER_COMMIT.slice(0, 7)}\` (stage 6) and link ${LOADER_BASE} — the second with \`&mobile=1\`, the loader's mobile layout.` : ''}`;
@@ -280,6 +296,7 @@ const COLDEFS = [
   { key: 'loader_mobile', label: 'Mobile', desc: 'The same loader URL with ?mobile=1 — the loader\'s mobile layout: one column, the tree until you open a layer and then the layer full width, a bottom nav bar and 44px tap targets. The engines themselves ship no @media query at all. Present only when the pinned loader commit carries the mode (stage 6).', note: '▶ mobile = a URL; empty = not hosted, or the pinned loader predates the mode' },
   { key: 'checkout_bytes', label: 'Game size', desc: 'How big the game itself is: the bytes of the working tree at the commit the census booted, .git excluded (stage 7). This is what a copy of it costs to host — what `git subtree add` puts in a loader — and it is the number to judge "is this small enough" by.', note: 'MB; empty when the repo was not cloned on the machine that ran the stage' },
   { key: 'repo_kb', label: 'Repository size', desc: 'What GitHub reports for the repository: packed, and INCLUDING ALL HISTORY (stage 1\'s size field). It is what cloning the fork costs, and it is NOT a proxy for the game size beside it — over these rows the two diverge by a median of 3x and a maximum of 34x, in both directions (a heavy history reads far larger than its game; a pile of incompressible PNGs reads smaller).', note: 'MB, converted from the API\'s KB' },
+  { key: 'not_hosted', label: 'Why not hosted', desc: 'For a ranked game the loader does not host: why. The loader publishes its own list of what it looked at and declined (manifests/declined.json, read at the pinned commit by stage 6) and that reason wins, because it made the attempt and saw the evidence. Where it has none, the census says only what it measured itself — a boot that failed here, or a repo it never cloned. Empty for a hosted game.', note: 'text; empty when the game IS hosted, and also when nothing here has anything to say about it' },
   { key: 'mod_name', label: 'Game name', desc: 'The game\'s own title, read from modInfo.name in js/mod.js.', note: 'text, exactly as the fork wrote it' },
   { key: 'version_num', label: 'Version', desc: 'The game\'s own version string, from modInfo.versionNumber.', note: 'text; the stock demo\'s "0.0" earns no completeness point' },
   { key: 'base', label: 'Base game', desc: 'The calibration tree this game is built on: its layer-id set contains that tree\'s, so it is that game plus added or changed content (STAGES.md, Family collapse (c)).', note: 'PTR or TMT; empty when it is not built on one' },
@@ -318,7 +335,7 @@ const COLDEFS = [
   { key: 'license', label: 'License', desc: "The license GitHub detected on the repository at census time — its license.spdx_id, quoted as reported and not a legal determination; \"none\" means GitHub detected no LICENSE file, which does not free the code, since a fork of an MIT project without the file is still bound by the upstream terms.", note: 'SPDX id, e.g. MIT; NOASSERTION = a license file licensee could not match (the TMT lineage\'s MIT text carries a non-standard copyright line, so nearly every row reads this); calibration rows are read from their clone\'s own files' },
 ];
 const cols = COLDEFS.map((d) => d.key);
-const slim = rows.map((r) => ({ ...Object.fromEntries(cols.map((c) => [c, c === 'widthPerRow' ? (r[c] || []).join(',') : c === 'pushed_at' ? (r[c] || '').slice(0, 10) : c === 'play' ? (r.live_ok ? 'live' : r.live_url ? 'dead' : null) : c === 'loader' ? (r.loader_url ? 'hosted' : null) : c === 'loader_mobile' ? (r.loader_mobile_url ? 'hosted' : null) : r[c] ?? null])),
+const slim = rows.map((r) => ({ ...Object.fromEntries(cols.map((c) => [c, c === 'widthPerRow' ? (r[c] || []).join(',') : c === 'pushed_at' ? (r[c] || '').slice(0, 10) : c === 'play' ? (r.live_ok ? 'live' : r.live_url ? 'dead' : null) : c === 'loader' ? (r.loader_url ? 'hosted' : null) : c === 'loader_mobile' ? (r.loader_mobile_url ? 'hosted' : null) : c === 'not_hosted' ? (notHosted(r) || null) : r[c] ?? null])),
   checkout_files: r.checkout_files ?? null,
   url: r.url, calibration: r.calibration, live_url: r.live_url || null, live_ok: !!r.live_ok, live_status: r.live_status ?? null, loader_url: r.loader_url || null, loader_mobile_url: r.loader_mobile_url || null,
   lic_n: r.license_name || null, lic_s: r.license_source || null, lic_note: r.license_note || null,
@@ -422,7 +439,7 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 const rows=JSON.parse(document.getElementById('data').textContent);const cols=${JSON.stringify(cols)};
 const CD=${JSON.stringify(Object.fromEntries(COLDEFS.map((d) => [d.key, [d.label, d.desc, d.note]])))};
 const tip=c=>{const d=CD[c];return d?d[0]+' ('+c+') \u2014 '+d[1]+' \u00b7 '+d[2]:c};
-const text=new Set(['full_name','play','loader','license','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
+const text=new Set(['full_name','play','loader','loader_mobile','not_hosted','license','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
 const KEYCOLS=['rank','full_name','play','loader','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok','license'];
 const LS={get(k,d){try{const v=localStorage.getItem('tmtcensus.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('tmtcensus.'+k,JSON.stringify(v))}catch(e){}}};
 let hidden=new Set((LS.get('hidden',[])||[]).filter(c=>cols.includes(c)));
