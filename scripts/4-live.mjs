@@ -48,8 +48,8 @@ for (const [full_name, f] of forks) {
 }
 // Calibration rows are local clones. Only PTR has a public live page; its URL comes from the upstream repo's own
 // GitHub metadata (fetched once, cached) rather than being assumed here. Stock TMT's Pages site is the engine's
-// demo tree, not a game, and upgrade-land-tmt is local-only — both stay without a live URL, by the same call the
-// census makes elsewhere about what counts as a game.
+// demo tree, not a game, so it stays without a live URL, by the same call the census makes elsewhere about what
+// counts as a game.
 const CAL_LIVE = { 'calibration:Prestige-Tree': 'Jacorb90/Prestige-Tree' };
 for (const cal of CALIBRATION) {
   const up = CAL_LIVE[cal.full_name];

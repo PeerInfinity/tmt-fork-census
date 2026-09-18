@@ -65,7 +65,7 @@ located, before re-censusing).
 set on the same `tmtNum` (copies and light edits of one game); the best-scoring member represents it (ties — copies score the same — go to the most
 stars, then the most-copied content hash, i.e. the unmodified game rather than someone's broken edit, then the
 latest push), and every family with a shortlist score > 0 is booted (slice 1 booted the top 60; slice 2 ran `SHORTLIST=1000`, i.e. all 195, in 9.2 min for the 135 not yet booted), plus three calibration rows from local clones
-(`~/CC/Prestige-Tree`, `~/CC/The-Modding-Tree`, `~/CC/upgrade-land-tmt`).
+(`~/CC/Prestige-Tree`, `~/CC/The-Modding-Tree`).
 
 Per row: `git clone --depth 1` into `clones/`; **engine deviation** = `git diff --no-index --numstat` of every
 engine file in the stock commit for the fork's `tmtNum` (`index.html`, `style.css`, `css/*.css`, `js/*.js` except
@@ -113,8 +113,8 @@ repos already in `data/live.jsonl` are skipped. `--recheck` ignores both.
 
 Calibration rows are local clones, so only PTR has a public page; its URL comes from the upstream repo's own
 GitHub metadata (`https://jacorb90.github.io/Prestige-Tree/`, which redirects to `https://jacorb90.me/Prestige-Tree/`)
-rather than being written down here. Stock TMT's Pages site is the engine's demo tree, not a game, and
-`upgrade-land-tmt` is local-only: neither gets a live URL.
+rather than being written down here. Stock TMT's Pages site is the engine's demo tree, not a game, so it gets no
+live URL.
 
 `rank.mjs` joins the rows on `full_name` and carries `live_url`, `live_status`, `live_ok` and `live_source` into
 `results/table.json`, a `play` column in `results/SUMMARY.md` and the `play` column of the page (also on each
@@ -135,8 +135,8 @@ the 1,914 forks: NOASSERTION 1,907, MIT 6, none 1. `none` does not mean the code
 MIT project that dropped the file is still bound by the upstream terms.
 
 Calibration rows have no GitHub repo of their own, so their licenses are read from the files in the local clone:
-PTR and stock TMT both carry the two MIT texts → `MIT`; `upgrade-land-tmt` carries TMT's MIT for the engine while
-Upgrade Land's own data ships with no license of its own → `MIT (engine) / none (data)`.
+PTR and stock TMT both carry the two MIT texts → `MIT`. A calibration row whose own files do not tell the whole
+story can carry a note (`CAL_NOTE` in `scripts/5-license.mjs`); none does at present.
 
 **Read as text, the two chosen games are plain MIT.** `lib/license-text.mjs: classifyLicenseText` answers the
 question licensee does not: it strips the copyright line, normalises whitespace, and compares what is left against

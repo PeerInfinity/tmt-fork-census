@@ -11,7 +11,7 @@
 // talking, not a legal finding.
 //
 // Calibration rows are local clones with no GitHub repo of their own, so their licenses are read off the files
-// in the clone (both MIT texts). upgrade-land-tmt carries TMT's MIT for the engine while Upgrade Land's own data
+// in the clone (both MIT texts). A calibration row whose own files do not tell the whole story can carry a note
 // is unlicensed, which the row says outright.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,8 +41,8 @@ function localLicense(dir) {
   const mit = files.filter((f) => MIT(fs.readFileSync(path.join(dir, f), 'utf8')));
   return { files, spdx: mit.length ? 'MIT' : files.length ? 'NOASSERTION' : null };
 }
-// Upgrade Land's own data (the tree it ships) carries no license of its own; only the TMT engine under it is MIT.
-const CAL_NOTE = { 'calibration:upgrade-land-tmt': { suffix: ' (engine) / none (data)', note: "TMT's MIT covers the engine; Upgrade Land's own data ships with no license" } };
+// Per-calibration notes where the repository's own files do not tell the whole story. None at present.
+const CAL_NOTE = {};
 
 const repoObjs = cachedRepoObjects();
 const forks = latestBy(readJsonl(p('data/forks.jsonl')));
