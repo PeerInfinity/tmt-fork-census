@@ -2,7 +2,7 @@
 
 A census of the GitHub forks of The Modding Tree and Prestige Tree (both fork lists, plus one level of forks-of-forks). Forks never pushed to are dropped; every other fork's files are read at HEAD and a small lexer counts its layers, tree rows, branch edges and content (milestones, upgrades, buyables, challenges, achievements). Forks with the same layer-id set on the same engine version form one family, represented by one fork; every family with a branching tree and some content is cloned and booted headless (200 idle ticks twice for determinism, plus a simple buy/reset policy), and its engine files are diffed against the closest stock TMT commit of its version (the port cost). Families that are exact copies of a calibration tree are folded into that tree's row. Rows are ranked by a 0–100 composite: branchiness 40, content 30, completeness 30, halved when the boot fails. The data are GitHub metadata and counts, not game code.
 
-Generated 2026-09-22 by `scripts/rank.mjs` from `data/*.jsonl` at commit `4a63e16` (with uncommitted data changes) of [PeerInfinity/tmt-fork-census](https://github.com/PeerInfinity/tmt-fork-census). The `loader` and `mobile` columns read [tmt-loader](https://github.com/PeerInfinity/tmt-loader)'s manifests at commit `8051fb6` (stage 6) and link https://peerinfinity.github.io/tmt-loader/ — the second with `&mobile=1`, the loader's mobile layout. Every number below is read from those rows.
+Generated 2026-09-22 by `scripts/rank.mjs` from `data/*.jsonl` at commit `a64ce35` (with uncommitted data changes) of [PeerInfinity/tmt-fork-census](https://github.com/PeerInfinity/tmt-fork-census). The `loader` and `mobile` columns read [tmt-loader](https://github.com/PeerInfinity/tmt-loader)'s manifests at commit `6ccb867` (stage 6) and link https://peerinfinity.github.io/tmt-loader/ — the second with `&mobile=1`, the loader's mobile layout. Every number below is read from those rows.
 🔧 = calibration row (local clone, not a fork). Score = branchiness 40 + content 30 + completeness 30 (formula: STAGES.md "Rank", `lib/score.mjs`).
 
 ## Funnel
@@ -24,7 +24,7 @@ Generated 2026-09-22 by `scripts/rank.mjs` from `data/*.jsonl` at commit `4a63e1
 | families collapsed into a calibration row as copies | 2 (PTR: 2 families / 16 forks · TMT: 0 families / 0 forks) |
 | ranked rows (families + calibration) | 197; marked `base`: PTR 2 · TMT 0 |
 | declared licenses (stage 5, GitHub's detection) | ranked rows: NOASSERTION 193 · MIT 3 · none 1 |
-| ranked rows hosted by the loader (stage 6, tmt-loader `8051fb6`) | 175 (of which 82 had no live page) |
+| ranked rows hosted by the loader (stage 6, tmt-loader `6ccb867`) | 175 (of which 82 had no live page) |
 | live pages derived and verified (stage 4) | 293 URLs — reachable 268, dead 25; of the ranked rows: 104 playable, 6 dead URL, 87 none |
 
 Engines (stage 2): tmt 1082 · prestige-tree-legacy 2 · no-game-js 9 · tmt-no-tmtNum 3 · unknown 1.
