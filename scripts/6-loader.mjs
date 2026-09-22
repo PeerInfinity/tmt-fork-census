@@ -39,7 +39,14 @@ for (const cal of CALIBRATION) if (cal.upstream) census.set(cal.upstream.toLower
 const mobileSupported = (() => {
   // `git show` of a path the pin does not have exits non-zero AND prints to stderr; quiet it, this is a probe
   const quiet = (f) => { try { return execFileSync('git', ['-C', LOADER_REPO, 'show', `${LOADER_COMMIT}:${f}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 16 * 1024 * 1024 }); } catch { return null; } };
-  return quiet('loader/mobile.css') !== null && /params\.get\(['"]mobile['"]\)/.test(quiet('loader/page.js') || '');
+  // ⚠ THE FLAG MOVED, AND THIS PROBE DID NOT (found 2026-09-22, deploying the census). The loader used to read
+  // `?mobile=1` in `loader/page.js`; it now declares every URL flag in `loader/flags.mjs`, so a test that greps
+  // page.js alone has been answering FALSE for pins that plainly support the mode — and the column it feeds is a
+  // LINK, so the census quietly stopped offering the mobile layout instead of saying anything.
+  // Both forms are accepted, because the pin may be older than the move and this file's whole contract is that it
+  // reads the pin rather than assuming the present.
+  const readsIt = (f) => /params\.get\(['"]mobile['"]\)/.test(quiet(f) || '') || /['"]mobile['"]/.test(quiet(f) || '');
+  return quiet('loader/mobile.css') !== null && (readsIt('loader/page.js') || readsIt('loader/flags.mjs'));
 })();
 
 // The loader also records what it LOOKED AT and declined, and why (manifests/declined.json). That judgement
