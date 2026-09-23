@@ -454,7 +454,7 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 <p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). The <em>loader</em> links come from <a href="${LOADER_REPO_URL}">tmt-loader</a>${LOADER_COMMIT ? ` (manifests read at commit <code>${hesc(LOADER_COMMIT.slice(0, 7))}</code>, served from <a href="${hesc(LOADER_BASE)}">${hesc(LOADER_BASE.replace('https://', ''))}</a>)` : ''}. The full method is <a href="${REPO_URL}/blob/HEAD/STAGES.md">STAGES.md</a>, and every column is defined in <a href="${REPO_URL}/blob/HEAD/COLUMNS.md">COLUMNS.md</a>.</p>
 <p><strong>AI disclosure.</strong> The census scripts, the documentation and this page were AI-generated (Claude Code sessions directed by PeerInfinity, who set the questions and reviewed the output); every number here is produced by those scripts from the GitHub API and the forks' own source files, and can be regenerated from the repo.</p>
 <details class="full"><summary>Every column, in full</summary>
-<dl class="lg">${COLDEFS.map((d) => `<dt><code>${hesc(d.key)}</code></dt><dd><b>${hesc(d.label)}</b> \u2014 ${hesc(d.desc)} <span class="n">${hesc(d.note)}</span></dd>`).join('')}</dl>
+<dl class="lg pl">${COLDEFS.map((d) => `<dt>${hesc(d.label)}</dt><dd>${hesc(d.desc)} <span class="n">${hesc(d.note)}</span></dd>`).join('')}</dl>
 </details>
 </div></details>
 <p class="lede">Games built on <a href="https://github.com/Acamaeda/The-Modding-Tree">The Modding Tree</a> and Prestige Tree, found among their GitHub forks and ranked by how branching the tree is, how much there is to do and whether it still runs. To play one, use <b>\u25b6 loader</b> (it runs in <a href="https://peerinfinity.github.io/tmt-loader/">tmt-loader</a>, even when the author's own page is gone), <b>\u25b6 mobile</b> for the same with a phone layout, or <b>\u25b6 play</b> for the author's own page where it still works. <b>Key columns</b> hides the technical ones; <b>about</b> above explains every column.</p>
@@ -475,7 +475,7 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 const rows=JSON.parse(document.getElementById('data').textContent);const cols=${JSON.stringify(cols)};
 const CD=${JSON.stringify(Object.fromEntries(COLDEFS.map((d) => [d.key, [d.label, d.desc, d.note]])))};
 const lab=c=>CD[c]?CD[c][0]:c;
-const tip=c=>{const d=CD[c];return d?d[0]+' ('+c+') \u2014 '+d[1]+' \u00b7 '+d[2]:c};
+const tip=c=>{const d=CD[c];return d?d[0]+' \u2014 '+d[1]+' \u00b7 '+d[2]:c};
 const text=new Set(['full_name','play','loader','loader_mobile','not_hosted','license','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
 const KEYCOLS=['rank','full_name','play','loader','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok','license'];
 const LS={get(k,d){try{const v=localStorage.getItem('tmtcensus.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('tmtcensus.'+k,JSON.stringify(v))}catch(e){}}};
