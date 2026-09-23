@@ -386,6 +386,7 @@ p{color:var(--mut);margin:0 0 12px;max-width:80ch}
 .lg dd{margin:0;color:var(--mut)}
 .lg b{color:var(--fg);font-weight:600}
 .ab p:last-child{margin-bottom:10px}
+.lede{margin:8px 0 0;max-width:110ch}
 .bar{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0;max-width:100%}
 button,input{font:inherit;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
 button{background:var(--btn);cursor:pointer}
@@ -424,13 +425,14 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 </style>
 <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tmtcensus.theme')==='"light"'?'light':'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
 </head><body>
-<details class="about" id="about"><summary><h1>TMT Fork Census</h1> <span class="n">about \u00b7 methodology, provenance, how to read the table</span></summary><div class="ab">
+<details class="about" id="about"><summary><h1>TMT Fork Census</h1> <span class="n">about this table \u00b7 what each column means, how it was made</span></summary><div class="ab">
 <p>${hesc(METHOD)}</p>
 <p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). The <em>play</em> column links the repo's verified live page (stage 4); a greyed marker means the page exists in the repo's metadata but did not answer. The <em>loader</em> column links the same game loaded through <a href="${LOADER_REPO_URL}">tmt-loader</a>${LOADER_COMMIT ? ` (manifests read at commit <code>${hesc(LOADER_COMMIT.slice(0, 7))}</code>, served from <a href="${hesc(LOADER_BASE)}">${hesc(LOADER_BASE.replace('https://', ''))}</a>)` : ''}, for every row the loader hosts, live page or not (stage 6). Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort; drag a header's right edge to resize it (double-click that edge to reset); the table scrolls sideways inside its own frame.</p>
 <p><strong>AI disclosure.</strong> The census scripts, the documentation and this page were AI-generated (Claude Code sessions directed by PeerInfinity, who set the questions and reviewed the output); every number here is produced by those scripts from the GitHub API and the forks' own source files, and can be regenerated from the repo.</p>
 <h2>Columns</h2>
 <dl class="lg">${COLDEFS.map((d) => `<dt><code>${hesc(d.key)}</code></dt><dd><b>${hesc(d.label)}</b> \u2014 ${hesc(d.desc)} <span class="n">${hesc(d.note)}</span></dd>`).join('')}</dl>
 </div></details>
+<p class="lede">Games built on <a href="https://github.com/Acamaeda/The-Modding-Tree">The Modding Tree</a> and Prestige Tree, found among their GitHub forks and ranked by how branching the tree is, how much there is to do and whether it still runs. To play one, use <b>\u25b6 loader</b> (it runs in <a href="https://peerinfinity.github.io/tmt-loader/">tmt-loader</a>, even when the author's own page is gone), <b>\u25b6 mobile</b> for the same with a phone layout, or <b>\u25b6 play</b> for the author's own page where it still works. <b>Key columns</b> hides the technical ones; <b>about</b> above explains every column.</p>
 <script>try{if(localStorage.getItem('tmtcensus.about')==='true')document.getElementById('about').open=true}catch(e){}</script>
 <div class="bar">
 <input id="q" placeholder="filter by repo or game name" aria-label="filter">
@@ -447,6 +449,7 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 <script>
 const rows=JSON.parse(document.getElementById('data').textContent);const cols=${JSON.stringify(cols)};
 const CD=${JSON.stringify(Object.fromEntries(COLDEFS.map((d) => [d.key, [d.label, d.desc, d.note]])))};
+const lab=c=>CD[c]?CD[c][0]:c;
 const tip=c=>{const d=CD[c];return d?d[0]+' ('+c+') \u2014 '+d[1]+' \u00b7 '+d[2]:c};
 const text=new Set(['full_name','play','loader','loader_mobile','not_hosted','license','mod_name','version_num','base','tmtNum','widthPerRow','pushed_at','dev_stock','members']);
 const KEYCOLS=['rank','full_name','play','loader','mod_name','version_num','base','score','layers','rows','content','pushed_at','stars','members','boot_ok','license'];
@@ -459,7 +462,7 @@ const vis=()=>cols.filter(c=>!hidden.has(c));
 function applyWidths(){let s='';for(const c of cols){const w=widths[c];if(w)s+='th[data-c="'+c+'"],td[data-c="'+c+'"]{width:'+w+'px;min-width:'+w+'px;max-width:'+w+'px}'}cw.textContent=s}
 const EDGE=8,near=(th,x)=>th.getBoundingClientRect().right-x<=EDGE;let dragged=false;
 function head(){h.replaceChildren(...vis().map(c=>{const th=document.createElement('th');th.dataset.c=c;th.className=(text.has(c)?'t':'');th.title=tip(c)+'\\n\\nClick to sort, drag the right edge to resize, double-click that edge to reset.';
-th.appendChild(document.createTextNode(c+(key===c?(dir>0?' \\u25b2':' \\u25bc'):'')));
+th.appendChild(document.createTextNode(lab(c)+(key===c?(dir>0?' \\u25b2':' \\u25bc'):'')));
 const rs=document.createElement('span');rs.className='rs';th.appendChild(rs);
 th.addEventListener('pointermove',e=>{if(!dragging)th.classList.toggle('rz',near(th,e.clientX))});
 th.addEventListener('pointerleave',()=>{if(!dragging)th.classList.remove('rz')});
@@ -495,7 +498,7 @@ else{const v=r[c]==null?'':String(r[c]);td.textContent=v;if(v&&text.has(c))td.ti
 tr.appendChild(td)}return tr}))}
 function boxes(){cg.replaceChildren(...cols.map(c=>{const l=document.createElement('label'),cb=document.createElement('input');cb.type='checkbox';cb.checked=!hidden.has(c);
 cb.onchange=()=>{if(cb.checked)hidden.delete(c);else hidden.add(c);LS.set('hidden',[...hidden]);head();draw()};
-l.title=tip(c);l.appendChild(cb);l.appendChild(document.createTextNode(c));return l}))}
+l.title=tip(c);l.appendChild(cb);l.appendChild(document.createTextNode(lab(c)));return l}))}
 function setHidden(s){hidden=s;LS.set('hidden',[...hidden]);boxes();head();draw()}
 document.getElementById('all').onclick=()=>setHidden(new Set());
 document.getElementById('key').onclick=()=>setHidden(new Set(cols.filter(c=>!KEYCOLS.includes(c))));

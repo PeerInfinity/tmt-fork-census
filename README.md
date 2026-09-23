@@ -6,6 +6,12 @@ shortlist, how far each one's engine deviates from stock TMT (the cost of portin
 
 **▶ Live results: <https://peerinfinity.github.io/tmt-fork-census/>**
 
+**Just want to play?** The live results are a ranked, sortable table of these games. In each row, **▶ loader** opens
+the game in [tmt-loader](https://peerinfinity.github.io/tmt-loader/) (it runs there even when the author's own page
+is gone), **▶ mobile** opens it with a phone layout, and **▶ play** opens the author's own page where it still
+works. **Key columns** hides the technical columns; **about**, at the top of the page, explains every column.
+The rest of this README is about how the census is made.
+
 **AI disclosure.** The code, the documentation and the results page in this repository were AI-generated (Claude Code sessions directed by PeerInfinity, who set the questions and reviewed the output). Every number is produced by the scripts here, run against the GitHub API and the forks' own source files, and can be regenerated from `data/*.jsonl`.
 
 Results: [`results/SUMMARY.md`](results/SUMMARY.md) (ranked table + funnel), [`results/table.json`](results/table.json)
