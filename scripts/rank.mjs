@@ -226,6 +226,20 @@ const HDR = '| # | repo | play | loader | mobile | license | game / version | en
 const booted = rows.filter((r) => r.boot_ok != null);
 const LOADER_REPO_URL = 'https://github.com/PeerInfinity/tmt-loader';
 const provenance = `Generated ${GEN_DATE} by \`scripts/rank.mjs\` from \`data/*.jsonl\` at commit \`${DATA_COMMIT}\`${DATA_DIRTY ? ' (with uncommitted data changes)' : ''} of [${REPO_URL.replace('https://github.com/', '')}](${REPO_URL}).${LOADER_COMMIT ? ` The \`loader\` and \`mobile\` columns read [tmt-loader](${LOADER_REPO_URL})'s manifests at commit \`${LOADER_COMMIT.slice(0, 7)}\` (stage 6) and link ${LOADER_BASE} — the second with \`&mobile=1\`, the loader's mobile layout.` : ''}`;
+// (U15) the about section's "Reading the table": the columns a PLAYER reads, in plain words, before the technical
+// definitions. Every key must exist in COLDEFS (its label is taken from there); the full definitions stay in COLDEFS.
+const PLAIN = [
+  ['mod_name', "The game's title, as its author wrote it."],
+  ['full_name', "The author's GitHub repository. Games with the same title are told apart by this."],
+  ['score', 'The overall ranking, 0\u2013100: how branching the tree is (up to 40), how much there is to do (up to 30) and how finished it looks (up to 30); halved if it failed to run here.'],
+  ['layers', 'How many layers \u2014 the nodes of the tree \u2014 the game has.'],
+  ['rows', 'How many rows deep the tree goes.'],
+  ['content', 'Milestones, upgrades, buyables, challenges and achievements, added up.'],
+  ['pushed_at', 'When the author last updated the repository.'],
+  ['members', 'How many other forks are copies of this same game; expand the cell to list them.'],
+  ['boot_ok', 'Whether the game ran when it was tested here.'],
+  ['license', 'The licence GitHub detected. "none" or NOASSERTION does not mean the code is free to reuse.'],
+];
 const METHOD = `A census of the GitHub forks of The Modding Tree and Prestige Tree (both fork lists, plus one level of forks-of-forks). Forks never pushed to are dropped; every other fork's files are read at HEAD and a small lexer counts its layers, tree rows, branch edges and content (milestones, upgrades, buyables, challenges, achievements). Forks with the same layer-id set on the same engine version form one family, represented by one fork; every family with a branching tree and some content is cloned and booted headless (200 idle ticks twice for determinism, plus a simple buy/reset policy), and its engine files are diffed against the closest stock TMT commit of its version (the port cost). Families that are exact copies of a calibration tree are folded into that tree's row. Rows are ranked by a 0–100 composite: branchiness 40, content 30, completeness 30, halved when the boot fails. The data are GitHub metadata and counts, not game code.`;
 const copyLink = (x) => `[${esc(x.full_name)}](${x.url})${x.live_ok ? ` ([▶ play](${x.live_url}))` : ''}${x.tmtNum ? ` (${esc(x.tmtNum)})` : ''}${x.edited ? ' ~edited member' : ''}${x.representative ? ' ★' : ''}`;
 const md = `# TMT fork census — results
@@ -387,6 +401,8 @@ p{color:var(--mut);margin:0 0 12px;max-width:80ch}
 .lg b{color:var(--fg);font-weight:600}
 .ab p:last-child{margin-bottom:10px}
 .lede{margin:8px 0 0;max-width:110ch}
+.lg.pl dt{font-family:inherit;font-size:inherit;font-weight:600}
+.ab details.full>summary{cursor:pointer;margin:4px 0 8px;font-weight:600}
 .bar{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0;max-width:100%}
 button,input{font:inherit;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
 button{background:var(--btn);cursor:pointer}
@@ -426,11 +442,20 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tmtcensus.theme')==='"light"'?'light':'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
 </head><body>
 <details class="about" id="about"><summary><h1>TMT Fork Census</h1> <span class="n">about this table \u00b7 what each column means, how it was made</span></summary><div class="ab">
+<h2>What this is</h2>
+<p>Games built on The Modding Tree and Prestige Tree, found by going through their GitHub forks. The table keeps the forks that look like games &mdash; one row per game, however many forks copy it &mdash; best first. The ranking favours a tree that branches rather than one straight line of layers, plenty to do, and signs of a finished game &mdash; an ending, a version number, a recent update, and that it still runs.</p>
+<h2>Playing a game</h2>
+<p><b>\u25b6 loader</b> opens the game in <a href="https://peerinfinity.github.io/tmt-loader/">tmt-loader</a>, which runs it on its own engine even when the author's page is gone; <b>\u25b6 mobile</b> opens the same with a one-column phone layout; <b>\u25b6 play</b> opens the author's own page, and a grey <b>\u25b6 dead</b> means that page no longer answers. A row with no loader link is a game the loader does not host; the <em>Why not hosted</em> column, far right, says why when it is known.</p>
+<h2>Reading the table</h2>
+<dl class="lg pl">${PLAIN.map(([k, t]) => `<dt>${hesc((COLDEFS.find((d) => d.key === k) || {}).label || k)}</dt><dd>${hesc(t)}</dd>`).join('')}</dl>
+<p>The columns further right are technical: how the score is built, the shape of the tree, the engine and how far it differs from stock TMT, the boot checks and the sizes. Hover a header for its definition, or open <em>Every column, in full</em> below. Click a header to sort; drag its right edge to resize (double-click the edge to reset); the table scrolls sideways inside its frame. <b>Key columns</b> hides the technical ones. Shaded rows are the two calibration games, Prestige Tree Rewritten and The Modding Tree itself, which the scores are measured against.</p>
+<h2>How it was made</h2>
 <p>${hesc(METHOD)}</p>
-<p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). The <em>play</em> column links the repo's verified live page (stage 4); a greyed marker means the page exists in the repo's metadata but did not answer. The <em>loader</em> column links the same game loaded through <a href="${LOADER_REPO_URL}">tmt-loader</a>${LOADER_COMMIT ? ` (manifests read at commit <code>${hesc(LOADER_COMMIT.slice(0, 7))}</code>, served from <a href="${hesc(LOADER_BASE)}">${hesc(LOADER_BASE.replace('https://', ''))}</a>)` : ''}, for every row the loader hosts, live page or not (stage 6). Shaded rows are calibration clones; their copies are listed in the <em>members</em> column. Click a header to sort; drag a header's right edge to resize it (double-click that edge to reset); the table scrolls sideways inside its own frame.</p>
+<p>Generated ${GEN_DATE} from <code>data/*.jsonl</code> at commit <code>${hesc(DATA_COMMIT)}</code>${DATA_DIRTY ? ' (with uncommitted data changes)' : ''}. Source, method and raw rows: <a href="${REPO_URL}">${REPO_URL.replace('https://', '')}</a> (<a href="${REPO_URL}/blob/HEAD/results/SUMMARY.md">SUMMARY.md</a>). The <em>loader</em> links come from <a href="${LOADER_REPO_URL}">tmt-loader</a>${LOADER_COMMIT ? ` (manifests read at commit <code>${hesc(LOADER_COMMIT.slice(0, 7))}</code>, served from <a href="${hesc(LOADER_BASE)}">${hesc(LOADER_BASE.replace('https://', ''))}</a>)` : ''}. The full method is <a href="${REPO_URL}/blob/HEAD/STAGES.md">STAGES.md</a>, and every column is defined in <a href="${REPO_URL}/blob/HEAD/COLUMNS.md">COLUMNS.md</a>.</p>
 <p><strong>AI disclosure.</strong> The census scripts, the documentation and this page were AI-generated (Claude Code sessions directed by PeerInfinity, who set the questions and reviewed the output); every number here is produced by those scripts from the GitHub API and the forks' own source files, and can be regenerated from the repo.</p>
-<h2>Columns</h2>
+<details class="full"><summary>Every column, in full</summary>
 <dl class="lg">${COLDEFS.map((d) => `<dt><code>${hesc(d.key)}</code></dt><dd><b>${hesc(d.label)}</b> \u2014 ${hesc(d.desc)} <span class="n">${hesc(d.note)}</span></dd>`).join('')}</dl>
+</details>
 </div></details>
 <p class="lede">Games built on <a href="https://github.com/Acamaeda/The-Modding-Tree">The Modding Tree</a> and Prestige Tree, found among their GitHub forks and ranked by how branching the tree is, how much there is to do and whether it still runs. To play one, use <b>\u25b6 loader</b> (it runs in <a href="https://peerinfinity.github.io/tmt-loader/">tmt-loader</a>, even when the author's own page is gone), <b>\u25b6 mobile</b> for the same with a phone layout, or <b>\u25b6 play</b> for the author's own page where it still works. <b>Key columns</b> hides the technical ones; <b>about</b> above explains every column.</p>
 <script>try{if(localStorage.getItem('tmtcensus.about')==='true')document.getElementById('about').open=true}catch(e){}</script>
