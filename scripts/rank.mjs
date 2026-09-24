@@ -400,7 +400,6 @@ p{color:var(--mut);margin:0 0 12px;max-width:80ch}
 .lg dd{margin:0;color:var(--mut)}
 .lg b{color:var(--fg);font-weight:600}
 .ab p:last-child{margin-bottom:10px}
-.lede{margin:8px 0 0;max-width:110ch}
 .lg.pl dt{font-family:inherit;font-size:inherit;font-weight:600}
 .ab details.full>summary{cursor:pointer;margin:4px 0 8px;font-weight:600}
 .bar{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0;max-width:100%}
@@ -441,7 +440,7 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 </style>
 <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('tmtcensus.theme')==='"light"'?'light':'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}</script>
 </head><body>
-<details class="about" id="about"><summary><h1>TMT Fork Census</h1> <span class="n">about this table \u00b7 what each column means, how it was made</span></summary><div class="ab">
+<details class="about" id="about"><summary><h1>TMT Fork Census</h1> <span class="n">about this table \u00b7 how to play a game, what each column means, how it was made</span></summary><div class="ab">
 <h2>What this is</h2>
 <p>Games built on The Modding Tree and Prestige Tree, found by going through their GitHub forks. The table keeps the forks that look like games &mdash; one row per game, however many forks copy it &mdash; best first. The ranking favours a tree that branches rather than one straight line of layers, plenty to do, and signs of a finished game &mdash; an ending, a version number, a recent update, and that it still runs.</p>
 <h2>Playing a game</h2>
@@ -457,7 +456,6 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 <dl class="lg pl">${COLDEFS.map((d) => `<dt>${hesc(d.label)}</dt><dd>${hesc(d.desc)} <span class="n">${hesc(d.note)}</span></dd>`).join('')}</dl>
 </details>
 </div></details>
-<p class="lede">Games built on <a href="https://github.com/Acamaeda/The-Modding-Tree">The Modding Tree</a> and Prestige Tree, found among their GitHub forks and ranked by how branching the tree is, how much there is to do and whether it still runs. To play one, use <b>\u25b6 loader</b> (it runs in <a href="https://peerinfinity.github.io/tmt-loader/">tmt-loader</a>, even when the author's own page is gone), <b>\u25b6 mobile</b> for the same with a phone layout, or <b>\u25b6 play</b> for the author's own page where it still works. <b>Key columns</b> hides the technical ones; <b>about</b> above explains every column.</p>
 <script>try{if(localStorage.getItem('tmtcensus.about')==='true')document.getElementById('about').open=true}catch(e){}</script>
 <div class="bar">
 <input id="q" placeholder="filter by repo or game name" aria-label="filter">
