@@ -400,6 +400,8 @@ p{color:var(--mut);margin:0 0 12px;max-width:80ch}
 .lg dd{margin:0;color:var(--mut)}
 .lg b{color:var(--fg);font-weight:600}
 .ab p:last-child{margin-bottom:10px}
+.ctrls{margin-top:8px}
+.ctrls>.bar{padding:0 10px 10px;margin:0;border-top:1px solid var(--line);padding-top:8px}
 .lg.pl dt{font-family:inherit;font-size:inherit;font-weight:600}
 .ab details.full>summary{cursor:pointer;margin:4px 0 8px;font-weight:600}
 .bar{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0;max-width:100%}
@@ -457,6 +459,7 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 </details>
 </div></details>
 <script>try{if(localStorage.getItem('tmtcensus.about')==='true')document.getElementById('about').open=true}catch(e){}</script>
+<details class="about ctrls" id="ctrls"><summary><b>Filter and columns</b> <span class="n" id="count"></span></summary>
 <div class="bar">
 <input id="q" placeholder="filter by repo or game name" aria-label="filter">
 <details class="cols"><summary>Columns</summary><div class="cg" id="cg"></div></details>
@@ -464,8 +467,9 @@ details.m>summary{cursor:pointer;white-space:nowrap}
 <button id="all" type="button">All columns</button>
 <button id="key" type="button">Key columns</button>
 <button id="rw" type="button">Reset widths</button>
-<span class="n" id="count"></span>
 </div>
+</details>
+<script>try{if(localStorage.getItem('tmtcensus.ctrls')==='true')document.getElementById('ctrls').open=true}catch(e){}</script>
 <div class="wrap" id="wrap"><table id="tbl"><thead><tr id="h"></tr></thead><tbody id="b"></tbody></table></div>
 <style id="cw"></style>
 <script type="application/json" id="data">${JSON.stringify(slim).replace(/</g, '\\u003c')}</script>
@@ -530,6 +534,7 @@ const tb=document.getElementById('theme');
 const paint=()=>{tb.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'Light':'Dark'};
 tb.onclick=()=>{const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);LS.set('theme',t);paint()};
 const ab=document.getElementById('about');ab.addEventListener('toggle',()=>LS.set('about',ab.open));
+const ct=document.getElementById('ctrls');ct.addEventListener('toggle',()=>LS.set('ctrls',ct.open));
 paint();q.oninput=draw;applyWidths();boxes();head();draw();
 </script></body></html>`;
 fs.mkdirSync(p('docs'), { recursive: true });
