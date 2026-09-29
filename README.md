@@ -63,7 +63,7 @@ The detail of what each stage does — and the manifest emitter, the ranking for
 
 ## tmt-loader
 
-Most of the games this census ranks have no working play page of their own — their authors' GitHub Pages were
+Nearly half of the games this census ranks have no working play page of their own — their authors' GitHub Pages were
 never enabled or have gone. **[tmt-loader](https://github.com/PeerInfinity/tmt-loader)** ([live](https://peerinfinity.github.io/tmt-loader/)) is the companion project that hosts them:
 one static page that loads each game **on its own TMT engine version**, with no CDN and no build step, a save
 namespaced per game, and an opt-in mobile layout. Stage 6 reads its manifests at a pinned commit and gives every
