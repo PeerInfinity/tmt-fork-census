@@ -22,7 +22,12 @@ import { execFileSync } from 'node:child_process';
 import { p, readJsonl, latestBy } from '../lib/util.mjs';
 import { CALIBRATION, CC_DIR } from '../lib/calibration.mjs';
 
-export const LOADER_COMMIT = process.env.LOADER_COMMIT || '9adfda45323a686b14f1ed86a9754a959998a30a';
+// ⚠ THE LOADER WAS RE-IMPORTED (the tmt-loader repository split, 2026-09-29): PeerInfinity/tmt-loader is a NEW,
+// history-free repository (the games are its submodule, tmt-loader-games), and the old one is
+// PeerInfinity/tmt-loader-archive. A pin from before the split (e.g. 6ccb867, which the published results named until
+// then) resolves only in a clone of the archive: LOADER_REPO=~/CC/tmt-loader-archive LOADER_COMMIT=<old sha>.
+// The manifests were imported byte-identical, so re-pinning moved only loader_commit and the provenance lines.
+export const LOADER_COMMIT = process.env.LOADER_COMMIT || '6d47c4f03a3e947bac9f1e425e708116e99b1bd5';
 export const LOADER_BASE = process.env.LOADER_BASE || 'https://peerinfinity.github.io/tmt-loader/';
 const LOADER_REPO = process.env.LOADER_REPO || path.join(CC_DIR, 'tmt-loader');
 const OUT = p('data/loader.jsonl');

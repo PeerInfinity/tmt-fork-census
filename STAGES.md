@@ -174,6 +174,14 @@ pinned commit. That judgement belongs on its side — it made the attempt and sa
 it rather than forming an opinion of its own. A repo cannot be both hosted and declined: the loader gates that, and
 the duplicate check here would catch it too. A pin older than the file simply yields no declined rows.
 
+> **2026-09-29 — the loader repository split.** The games moved to their own repository (tmt-loader-games, a submodule
+> of the loader) and the loader was re-imported as a NEW, history-free `PeerInfinity/tmt-loader`; the old repository is
+> `PeerInfinity/tmt-loader-archive`. This stage reads only `manifests/` and three `loader/` probe files, all imported
+> byte-identical, so nothing here changed but the pin: re-running stage 6 at the new loader's first published commit
+> moved `loader_commit` on every row and the provenance lines, and no `loader` or `mobile` link (measured on all 197
+> rows before the switch-over). `LOADER_REPO` still defaults to `~/CC/tmt-loader`, which is now a clone of the new
+> repository; an OLD pin resolves only in the archive (`LOADER_REPO=~/CC/tmt-loader-archive`).
+
 `rank.mjs` joins the rows on `full_name` and carries `loader_url`, `loader_mobile_url`, `loader_id` and
 `loader_commit` into `results/table.json`, a `loader` and a `mobile` column in `results/SUMMARY.md` and on the page —
 for every ranked row the loader hosts, including rows that also have a live page — plus `declined_short` and `declined_reason`:
