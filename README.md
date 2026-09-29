@@ -69,6 +69,9 @@ one static page that loads each game **on its own TMT engine version**, with no 
 namespaced per game, and an opt-in mobile layout. Stage 6 reads its manifests at a pinned commit and gives every
 row the census ranks two links — `loader` and `mobile` — beside the author's own `play` link.
 
+If one of the hosted games is yours and you'd like it removed, see the loader's
+[note for the authors of these games](https://github.com/PeerInfinity/tmt-loader#for-the-authors-of-these-games).
+
 The loader's manifests are emitted by this repo's `scripts/manifest.mjs` (see [STAGES.md](STAGES.md)), so the two
 repositories meet at that one file format: the census observes a game, the loader runs it.
 
